@@ -3,8 +3,8 @@
 Homelab infrastructure built around the BAT pattern:
 
 - `bootc` for the VM operating system image
-- Ansible for host and service configuration
-- Terraform/OpenTofu for VM provisioning
+- `Ansible` for host and service configuration
+- `OpenTofu` for VM provisioning
 
 ## Current Direction
 
