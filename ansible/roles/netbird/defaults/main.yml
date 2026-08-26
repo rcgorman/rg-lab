@@ -1,3 +1,2 @@
 ---
 netbird_setup_key: "{{ lookup('env', 'NETBIRD_SETUP_KEY') }}"
-netbird_management_url: ""

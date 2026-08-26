@@ -1,0 +1,6 @@
+---
+- name: Enroll hosts with NetBird
+  hosts: bootc_hosts
+  become: true
+  roles:
+    - netbird

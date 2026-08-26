@@ -1,10 +1,4 @@
 ---
-- name: Ensure NetBird service is enabled
-  ansible.builtin.systemd:
-    name: netbird.service
-    enabled: true
-    state: started
-
 - name: Check NetBird status
   ansible.builtin.command:
     cmd: netbird status
@@ -17,8 +11,16 @@
     cmd: >-
       netbird up
       --setup-key {{ netbird_setup_key }}
-      {% if netbird_management_url | length > 0 %}--management-url {{ netbird_management_url }}{% endif %}
-  when:
-    - netbird_setup_key | length > 0
-    - netbird_status.rc != 0 or 'Disconnected' in netbird_status.stdout
+      --management-url https://netbird.gormantech.com
+  when: "'LoginFailed' in netbird_status.stdout or netbird_status.rc != 0"
   no_log: true
+
+- name: Check final NetBird status
+  ansible.builtin.command:
+    cmd: netbird status
+  register: final_status
+  changed_when: false
+
+- name: Show NetBird IP
+  ansible.builtin.debug:
+    msg: "{{ final_status.stdout_lines | select('match', '^NetBird IP:') | list }}"

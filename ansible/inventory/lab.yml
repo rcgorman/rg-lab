@@ -1,8 +1,13 @@
 all:
   vars:
     ansible_user: ansible
+    ansible_python_interpreter: /usr/bin/python3.12
   children:
     bootc_hosts:
-      hosts: {}
+      hosts:
+        rg-bootc-test:
+          ansible_host: 10.6.13.15
     app_hosts:
-      hosts: {}
+      hosts:
+        rg-bootc-test:
+          ansible_host: 10.6.13.15
