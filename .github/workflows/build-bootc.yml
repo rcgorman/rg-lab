@@ -1,0 +1,44 @@
+---
+name: Build bootc image
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - bootc/**
+      - .github/workflows/build-bootc.yml
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_REF: ghcr.io/rcgorman/rg-lab/alma10-bootc:latest
+
+jobs:
+  build:
+    name: Build and push bootc image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push bootc image
+        uses: jharmison-redhat/action-bootc-build@v1.0.3
+        with:
+          context: bootc
+          file: bootc/Containerfile
+          graphroot: /mnt/containers-storage
+          pull: newer
+          push: true
+          tag: ${{ env.IMAGE_REF }}
