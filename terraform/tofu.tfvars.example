@@ -1,0 +1,28 @@
+proxmox_endpoint  = "https://pve.example.com:8006/"
+proxmox_api_token = "terraform@pve!rg-lab=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+proxmox_insecure  = true
+
+node_name                    = "pve"
+proxmox_ssh_username         = "root"
+proxmox_ssh_private_key_path = "~/.ssh/id_ed25519_terraform"
+image_id                     = "local:import/rg-lab-alma10-bootc.qcow2"
+datastore_id                 = "local-lvm"
+
+ssh_public_keys = [
+  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAEXAMPLE ansible@rg-lab"
+]
+
+vms = {
+  test_bootc_01 = {
+    vm_id        = 101
+    name         = "test-bootc-01"
+    cpu_cores    = 2
+    memory_mb    = 2048
+    disk_size_gb = 20
+    bridge       = "vmbr0"
+    ipv4_address = "192.168.50.201/24"
+    ipv4_gateway = "192.168.50.1"
+    dns_servers  = ["192.168.50.1"]
+    tags         = ["test"]
+  }
+}
