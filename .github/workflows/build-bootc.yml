@@ -77,7 +77,7 @@ jobs:
             bootc
 
       - name: Push latest tag
-        run: sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman push "${IMAGE_REF}"
+        run: sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman --root /mnt/containers-storage push "${IMAGE_REF}"
 
       - name: Push commit tag
-        run: sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman push "${IMAGE_SHA_REF}"
+        run: sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman --root /mnt/containers-storage push "${IMAGE_SHA_REF}"
