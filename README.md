@@ -13,7 +13,7 @@ The first milestone is the VM base image:
 - AlmaLinux 10 bootable container base
 - Podman quadlet support
 - cloud-init and qemu-guest-agent for VM provisioning
-- `irewalld, chrony, SELinux enforcing defaults
+- firewalld, chrony, SELinux enforcing defaults
 - NetBird client installed in the host image
 
 After that, service deployment should be VM-by-VM:
