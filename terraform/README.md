@@ -17,7 +17,7 @@ Application containers should not be defined here. They belong in Ansible roles 
 
 1. Build and push the bootc image with GitHub Actions.
 2. Convert the image to `qcow2`.
-3. Upload/import the disk into Proxmox storage so it has a file ID such as `local:import/rg-lab-alma10-bootc.qcow2`.
+3. Upload/import the disk into Proxmox storage so it has a file ID such as `local:import/rg-lab-alma10_2-bootc.qcow2`.
 4. Use OpenTofu to create workload VMs from that image.
 5. Use Semaphore/Ansible to enroll NetBird and deploy Podman quadlets.
 
