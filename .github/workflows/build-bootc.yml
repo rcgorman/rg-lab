@@ -14,8 +14,14 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
-  IMAGE_REF: ghcr.io/rcgorman/rg-lab/alma10-bootc:latest
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}/rg-lab
+  IMAGE_NAME: alma10-bootc
+  REGISTRY_AUTH_FILE: /tmp/containers-auth.json
 
 jobs:
   build:
@@ -26,19 +32,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Maximize build space
+        uses: ublue-os/remove-unwanted-software@v10
+
+      - name: Set image tags
+        run: |
+          image_ref="${IMAGE_REGISTRY}/${IMAGE_NAME}"
+          echo "IMAGE_REF=${image_ref}:latest" >> "${GITHUB_ENV}"
+          echo "IMAGE_SHA_REF=${image_ref}:sha-${GITHUB_SHA}" >> "${GITHUB_ENV}"
+
       - name: Log in to GHCR
         uses: redhat-actions/podman-login@v1
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+          auth_file_path: ${{ env.REGISTRY_AUTH_FILE }}
 
-      - name: Build and push bootc image
-        uses: jharmison-redhat/action-bootc-build@v1.0.3
-        with:
-          context: bootc
-          file: bootc/Containerfile
-          graphroot: /mnt/containers-storage
-          pull: newer
-          push: true
-          tag: ${{ env.IMAGE_REF }}
+      - name: Build bootc image
+        run: |
+          sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman build \
+            --security-opt=label=disable \
+            --cap-add=all \
+            --device=/dev/fuse \
+            --arch=amd64 \
+            --pull=newer \
+            --root /mnt/containers-storage \
+            --tag "${IMAGE_REF}" \
+            --tag "${IMAGE_SHA_REF}" \
+            --file bootc/Containerfile \
+            bootc
+
+      - name: Push latest tag
+        run: sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman push "${IMAGE_REF}"
+
+      - name: Push commit tag
+        run: sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman push "${IMAGE_SHA_REF}"
