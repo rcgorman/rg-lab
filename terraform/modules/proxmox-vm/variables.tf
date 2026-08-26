@@ -16,7 +16,7 @@ variable "node_name" {
 }
 
 variable "image_id" {
-  description = "File ID of the imported bootc qcow2 image."
+  description = "File ID of the imported bootc qcow2 image, for example local:import/rg-lab-alma10_2-bootc.qcow2."
   type        = string
 }
 

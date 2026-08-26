@@ -33,7 +33,7 @@ variable "proxmox_ssh_private_key_path" {
 }
 
 variable "image_id" {
-  description = "Proxmox file ID for the imported bootc qcow2 image, for example local:import/rg-lab-alma10-bootc.qcow2."
+  description = "Proxmox import file ID for the bootc qcow2 image, for example local:import/rg-lab-alma10_2-bootc.qcow2."
   type        = string
 }
 

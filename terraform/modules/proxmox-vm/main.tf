@@ -32,7 +32,7 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   disk {
     datastore_id = var.datastore_id
-    file_id      = var.image_id
+    import_from  = var.image_id
     interface    = "virtio0"
     iothread     = true
     discard      = "on"
@@ -40,6 +40,8 @@ resource "proxmox_virtual_environment_vm" "this" {
   }
 
   initialization {
+    datastore_id = var.datastore_id
+
     ip_config {
       ipv4 {
         address = var.ipv4_address
