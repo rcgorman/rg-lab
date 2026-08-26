@@ -1,0 +1,8 @@
+all:
+  vars:
+    ansible_user: ansible
+  children:
+    bootc_hosts:
+      hosts: {}
+    app_hosts:
+      hosts: {}

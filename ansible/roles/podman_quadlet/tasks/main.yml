@@ -1,0 +1,23 @@
+---
+- name: Ensure quadlet directory exists
+  ansible.builtin.file:
+    path: /etc/containers/systemd
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Render quadlet units
+  ansible.builtin.template:
+    src: quadlet.unit.j2
+    dest: "/etc/containers/systemd/{{ item.name }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ quadlet_units }}"
+  notify:
+    - Reload systemd
+    - Restart quadlet services
+
+- name: Flush quadlet handlers
+  ansible.builtin.meta: flush_handlers

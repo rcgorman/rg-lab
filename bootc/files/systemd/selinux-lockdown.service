@@ -1,0 +1,14 @@
+[Unit]
+Description=SELinux Lockdown
+After=local-fs.target
+Before=sysinit.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/setsebool -P deny_ptrace on
+ExecStart=/usr/sbin/setsebool -P secure_mode on
+ExecStart=/usr/bin/chattr +i /etc/selinux/config
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart quadlet services
+  ansible.builtin.systemd:
+    name: "{{ item.service | default((item.name | regex_replace('\\.(container|network|volume|pod|image|build)$', '.service'))) }}"
+    enabled: true
+    state: restarted
+  loop: "{{ quadlet_units }}"
+  when: item.enabled | default(true)

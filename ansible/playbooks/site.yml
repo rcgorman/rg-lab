@@ -1,0 +1,8 @@
+---
+- name: Configure homelab VMs
+  hosts: app_hosts
+  become: true
+  roles:
+    - common
+    - netbird
+    - podman_quadlet

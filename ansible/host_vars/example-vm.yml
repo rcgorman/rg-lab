@@ -1,0 +1,20 @@
+---
+quadlet_units:
+  - name: whoami.container
+    sections:
+      - name: Unit
+        options:
+          Description: Example whoami service
+      - name: Container
+        options:
+          Image: docker.io/traefik/whoami:v1.10
+          ContainerName: whoami
+          PublishPort: "8080:80"
+          Pull: newer
+      - name: Service
+        options:
+          Restart: always
+          TimeoutStartSec: 900
+      - name: Install
+        options:
+          WantedBy: multi-user.target

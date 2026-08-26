@@ -1,0 +1,47 @@
+FROM quay.io/almalinuxorg/almalinux-bootc:10
+
+COPY files/yum.repos.d/netbird.repo /etc/yum.repos.d/netbird.repo
+
+RUN dnf install -y \
+        bash-completion \
+        chrony \
+        cloud-init \
+        firewalld \
+        git \
+        jq \
+        netbird \
+        openscap-scanner \
+        podman \
+        python3 \
+        python3-libselinux \
+        qemu-guest-agent \
+        rsync \
+        scap-security-guide \
+        sudo \
+        vim-enhanced \
+        yq \
+    && dnf clean all
+
+# CIS Level 1 Server hardening
+RUN oscap xccdf eval --remediate \
+        --profile xccdf_org.ssgproject.content_profile_cis_server_l1 \
+        /usr/share/xml/scap/ssg/content/ssg-almalinux10-ds.xml ; \
+    dnf remove -y openscap-scanner scap-security-guide \
+    && dnf clean all
+
+# Crypto policy
+RUN update-crypto-policies --set DEFAULT
+
+# SELinux lockdown service
+COPY files/kargs.d/01-selinux.toml /usr/lib/bootc/kargs.d/01-selinux.toml
+COPY files/systemd/selinux-lockdown.service /usr/lib/systemd/system/selinux-lockdown.service
+
+# Enable services
+RUN systemctl enable \
+        chronyd.service \
+        firewalld.service \
+        netbird.service \
+        qemu-guest-agent.service \
+        selinux-lockdown.service
+
+RUN bootc container lint

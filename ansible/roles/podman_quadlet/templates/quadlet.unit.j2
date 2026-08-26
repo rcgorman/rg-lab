@@ -1,0 +1,13 @@
+{% for section in item.sections %}
+[{{ section.name }}]
+{% for key, value in section.options.items() %}
+{% if value is iterable and value is not string %}
+{% for entry in value %}
+{{ key }}={{ entry }}
+{% endfor %}
+{% else %}
+{{ key }}={{ value }}
+{% endif %}
+{% endfor %}
+
+{% endfor %}

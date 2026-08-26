@@ -1,0 +1,15 @@
+---
+- name: Ensure baseline host services are enabled
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - chronyd.service
+    - firewalld.service
+    - qemu-guest-agent.service
+
+- name: Keep SELinux enforcing
+  ansible.posix.selinux:
+    policy: targeted
+    state: enforcing
