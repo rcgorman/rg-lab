@@ -13,3 +13,23 @@
   ansible.posix.selinux:
     policy: targeted
     state: enforcing
+
+- name: Ensure containers subuid range exists
+  ansible.builtin.lineinfile:
+    path: /etc/subuid
+    regexp: "^containers:"
+    line: "containers:2147483647:2147483648"
+    owner: root
+    group: root
+    mode: "0644"
+    create: true
+
+- name: Ensure containers subgid range exists
+  ansible.builtin.lineinfile:
+    path: /etc/subgid
+    regexp: "^containers:"
+    line: "containers:2147483647:2147483648"
+    owner: root
+    group: root
+    mode: "0644"
+    create: true

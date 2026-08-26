@@ -3,10 +3,21 @@
   ansible.builtin.systemd:
     daemon_reload: true
 
+- name: Reset failed quadlet services
+  ansible.builtin.command:
+    cmd: "systemctl reset-failed {{ item.service | default((item.name | regex_replace('\\.(container|network|volume|pod|image|build)$', '.service'))) }}"
+  loop: "{{ quadlet_units }}"
+  changed_when: false
+  when:
+    - item.enabled | default(true)
+    - item.name is match('.*\\.container$')
+
 - name: Restart quadlet services
   ansible.builtin.systemd:
     name: "{{ item.service | default((item.name | regex_replace('\\.(container|network|volume|pod|image|build)$', '.service'))) }}"
     enabled: true
-    state: restarted
+    state: started
   loop: "{{ quadlet_units }}"
-  when: item.enabled | default(true)
+  when:
+    - item.enabled | default(true)
+    - item.name is match('.*\\.container$')

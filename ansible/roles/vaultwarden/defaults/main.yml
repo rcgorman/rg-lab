@@ -1,0 +1,53 @@
+---
+vaultwarden_quadlet_units:
+  - name: vaultwarden.network
+    enabled: false
+    sections:
+      - name: Unit
+        options:
+          Description: Vaultwarden bridge network
+      - name: Network
+        options:
+          NetworkName: vaultwarden
+
+  - name: vaultwarden-data.volume
+    enabled: false
+    sections:
+      - name: Unit
+        options:
+          Description: Vaultwarden data volume
+      - name: Volume
+        options:
+          VolumeName: vaultwarden-data
+
+  - name: vaultwarden.container
+    sections:
+      - name: Unit
+        options:
+          Description: Vaultwarden
+      - name: Container
+        options:
+          ContainerName: vaultwarden
+          Image: docker.io/vaultwarden/server:latest
+          UserNS: auto
+          AutoUpdate: registry
+          Pull: newer
+          Network: vaultwarden.network
+          PublishPort: "18080:80"
+          Environment:
+            - TZ=America/New_York
+            - DOMAIN=https://vault.internal.gormantech.com
+            - SIGNUPS_ALLOWED=false
+            - INVITATION_ORG_NAME=GormanTech
+            - WEBSOCKET_ENABLED=true
+            - WEB_VAULT_ENABLED=true
+            - SHOW_PASSWORD_HINT=false
+            - LOG_LEVEL=info
+          Secret: vaultwarden_admin_token,type=env,target=ADMIN_TOKEN
+          Volume: vaultwarden-data.volume:/data:idmap
+      - name: Service
+        options:
+          Restart: always
+      - name: Install
+        options:
+          WantedBy: multi-user.target

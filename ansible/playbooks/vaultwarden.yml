@@ -1,9 +1,8 @@
 ---
-- name: Configure homelab VMs
+- name: Deploy Vaultwarden
   hosts: app_hosts
   become: true
   roles:
     - common
-    - netbird
     - vaultwarden
     - podman_quadlet

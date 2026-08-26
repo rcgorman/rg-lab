@@ -17,6 +17,7 @@
   loop: "{{ quadlet_units }}"
   notify:
     - Reload systemd
+    - Reset failed quadlet services
     - Restart quadlet services
 
 - name: Flush quadlet handlers

@@ -1,0 +1,10 @@
+---
+- name: Check Vaultwarden admin token secret
+  ansible.builtin.command:
+    cmd: podman secret inspect vaultwarden_admin_token
+  register: vaultwarden_admin_token_secret
+  changed_when: false
+
+- name: Add Vaultwarden quadlet units
+  ansible.builtin.set_fact:
+    quadlet_units: "{{ (quadlet_units | default([])) + vaultwarden_quadlet_units }}"
