@@ -125,3 +125,5 @@ ssh -i ~/.ssh/id_ed25519_terraform root@10.6.13.10
 ## Notes
 
 The VM module follows the same broad pattern as the inspiration repo: `q35`, `ovmf`, an EFI disk, a boot disk created from the imported bootc image, static cloud-init networking, and an `ansible` user with SSH keys.
+
+Cloud-init package upgrades are disabled in OpenTofu because bootc hosts should update with `bootc upgrade`, not `dnf upgrade` during first boot.
