@@ -8,7 +8,6 @@ RUN dnf install -y \
         cloud-init \
         firewalld \
         git \
-        jq \
         netbird \
         openscap-scanner \
         podman \
@@ -19,7 +18,6 @@ RUN dnf install -y \
         scap-security-guide \
         sudo \
         vim-enhanced \
-        yq \
     && dnf clean all
 
 # CIS Level 1 Server hardening
