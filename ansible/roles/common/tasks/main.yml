@@ -9,11 +9,6 @@
     - firewalld.service
     - qemu-guest-agent.service
 
-- name: Keep SELinux enforcing
-  ansible.posix.selinux:
-    policy: targeted
-    state: enforcing
-
 - name: Ensure containers subuid range exists
   ansible.builtin.lineinfile:
     path: /etc/subuid
