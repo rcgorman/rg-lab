@@ -2,7 +2,11 @@
 - name: Deploy Vaultwarden
   hosts: identity_hosts
   become: true
+  vars:
+    podman_secrets:
+      vaultwarden_admin_token: "{{ lookup('env', 'VAULTWARDEN_ADMIN_TOKEN') }}"
   roles:
     - podman_subids
+    - podman_secrets
     - vaultwarden
     - podman_quadlet

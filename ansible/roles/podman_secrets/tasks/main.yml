@@ -1,0 +1,34 @@
+---
+- name: Ensure Podman secret values are present
+  ansible.builtin.assert:
+    that:
+      - item.value | length > 0
+    fail_msg: "Missing value for Podman secret {{ item.key }}"
+  loop: "{{ podman_secrets | dict2items }}"
+  no_log: true
+
+- name: Inspect Podman secrets
+  ansible.builtin.command:
+    cmd: "podman secret inspect {{ item.key }}"
+  register: podman_secret_inspect
+  changed_when: false
+  failed_when: false
+  loop: "{{ podman_secrets | dict2items }}"
+  no_log: true
+
+- name: Remove Podman secrets when recreation is enabled
+  ansible.builtin.command:
+    cmd: "podman secret rm {{ item.item.key }}"
+  when:
+    - podman_secrets_recreate | bool
+    - item.rc == 0
+  loop: "{{ podman_secret_inspect.results }}"
+  no_log: true
+
+- name: Create missing Podman secrets
+  ansible.builtin.command:
+    cmd: "podman secret create {{ item.item.key }} -"
+    stdin: "{{ item.item.value }}"
+  when: item.rc != 0 or podman_secrets_recreate | bool
+  loop: "{{ podman_secret_inspect.results }}"
+  no_log: true
