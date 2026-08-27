@@ -1,9 +1,12 @@
 ---
-- name: Configure homelab VMs
-  hosts: app_hosts
-  become: true
-  roles:
-    - common
-    - netbird
-    - vaultwarden
-    - podman_quadlet
+- name: Configure base bootc hosts
+  ansible.builtin.import_playbook: base.yml
+
+- name: Enroll bootc hosts with NetBird
+  ansible.builtin.import_playbook: netbird.yml
+
+- name: Deploy Semaphore UI
+  ansible.builtin.import_playbook: semaphore.yml
+
+- name: Deploy Vaultwarden
+  ansible.builtin.import_playbook: vaultwarden.yml

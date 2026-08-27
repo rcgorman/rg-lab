@@ -1,0 +1,16 @@
+---
+- name: Check Semaphore admin password secret
+  ansible.builtin.command:
+    cmd: podman secret inspect semaphore_admin_password
+  register: semaphore_admin_password_secret
+  changed_when: false
+
+- name: Check Semaphore access key encryption secret
+  ansible.builtin.command:
+    cmd: podman secret inspect semaphore_access_key_encryption
+  register: semaphore_access_key_encryption_secret
+  changed_when: false
+
+- name: Add Semaphore quadlet units
+  ansible.builtin.set_fact:
+    quadlet_units: "{{ (quadlet_units | default([])) + semaphore_quadlet_units }}"

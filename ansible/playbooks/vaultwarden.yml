@@ -1,8 +1,7 @@
 ---
 - name: Deploy Vaultwarden
-  hosts: app_hosts
+  hosts: secrets_hosts
   become: true
   roles:
-    - common
     - vaultwarden
     - podman_quadlet

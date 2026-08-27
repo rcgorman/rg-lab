@@ -12,7 +12,7 @@
       netbird up
       --setup-key {{ netbird_setup_key }}
       --management-url https://netbird.gormantech.com
-  when: "'LoginFailed' in netbird_status.stdout or netbird_status.rc != 0"
+  when: "'NetBird IP:' not in netbird_status.stdout"
   no_log: true
 
 - name: Check final NetBird status

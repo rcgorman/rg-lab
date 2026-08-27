@@ -1,0 +1,6 @@
+---
+- name: Configure base hosts
+  hosts: bootc_hosts
+  become: true
+  roles:
+    - common

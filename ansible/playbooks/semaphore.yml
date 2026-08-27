@@ -1,0 +1,7 @@
+---
+- name: Deploy Semaphore UI
+  hosts: semaphore_hosts
+  become: true
+  roles:
+    - semaphore
+    - podman_quadlet

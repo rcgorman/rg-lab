@@ -5,9 +5,14 @@ all:
   children:
     bootc_hosts:
       hosts:
-        rg-bootc-test:
-          ansible_host: 10.6.13.15
-    app_hosts:
+        rg-semaphore01:
+          ansible_host: 10.6.13.20
+    semaphore_hosts:
       hosts:
-        rg-bootc-test:
-          ansible_host: 10.6.13.15
+        rg-semaphore01:
+    secrets_hosts:
+      hosts: {}
+    data_hosts:
+      hosts: {}
+    apps_hosts:
+      hosts: {}

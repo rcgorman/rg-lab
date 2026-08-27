@@ -1,0 +1,83 @@
+---
+semaphore_quadlet_units:
+  - name: semaphore.network
+    enabled: false
+    sections:
+      - name: Unit
+        options:
+          Description: Semaphore bridge network
+      - name: Network
+        options:
+          NetworkName: semaphore
+
+  - name: semaphore-data.volume
+    enabled: false
+    sections:
+      - name: Unit
+        options:
+          Description: Semaphore data volume
+      - name: Volume
+        options:
+          VolumeName: semaphore-data
+
+  - name: semaphore-config.volume
+    enabled: false
+    sections:
+      - name: Unit
+        options:
+          Description: Semaphore config volume
+      - name: Volume
+        options:
+          VolumeName: semaphore-config
+
+  - name: semaphore-tmp.volume
+    enabled: false
+    sections:
+      - name: Unit
+        options:
+          Description: Semaphore temporary data volume
+      - name: Volume
+        options:
+          VolumeName: semaphore-tmp
+
+  - name: semaphore.container
+    sections:
+      - name: Unit
+        options:
+          Description: Semaphore UI
+      - name: Container
+        options:
+          ContainerName: semaphore
+          Image: docker.io/semaphoreui/semaphore:v2.18.27
+          UserNS: auto
+          AutoUpdate: registry
+          Pull: newer
+          Network: semaphore.network
+          PublishPort: "3000:3000"
+          Environment:
+            - TZ=America/New_York
+            - SEMAPHORE_DB_DIALECT=sqlite
+            - SEMAPHORE_DB=/etc/semaphore/semaphore.sqlite
+            - SEMAPHORE_ADMIN=admin
+            - SEMAPHORE_ADMIN_NAME=Admin
+            - SEMAPHORE_ADMIN_EMAIL=admin@gormantech.com
+            - SEMAPHORE_PORT=:3000
+            - SEMAPHORE_PLAYBOOK_PATH=/tmp/semaphore
+            - SEMAPHORE_TMP_PATH=/tmp/semaphore
+            - SEMAPHORE_SECRETS_PATH=/etc/semaphore
+            - SEMAPHORE_REPOS_DIR=/var/lib/semaphore/repositories
+            - SEMAPHORE_SCHEDULE_TIMEZONE=America/New_York
+            - ANSIBLE_HOST_KEY_CHECKING=False
+          Secret:
+            - semaphore_admin_password,type=env,target=SEMAPHORE_ADMIN_PASSWORD
+            - semaphore_access_key_encryption,type=env,target=SEMAPHORE_ACCESS_KEY_ENCRYPTION
+          Volume:
+            - semaphore-data.volume:/var/lib/semaphore:idmap
+            - semaphore-config.volume:/etc/semaphore:idmap
+            - semaphore-tmp.volume:/tmp/semaphore:idmap
+      - name: Service
+        options:
+          Restart: always
+      - name: Install
+        options:
+          WantedBy: multi-user.target
