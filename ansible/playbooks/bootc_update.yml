@@ -2,21 +2,13 @@
 - name: Update bootc hosts
   hosts: bootc_hosts
   become: true
-  vars:
-    bootc_image_ref: "{{ lookup('env', 'BOOTC_IMAGE_REF') }}"
   tasks:
-    - name: Require BOOTC_IMAGE_REF
-      ansible.builtin.assert:
-        that:
-          - bootc_image_ref | length > 0
-        fail_msg: "Set BOOTC_IMAGE_REF, for example registry.example.com/rg-lab/alma10-bootc:latest"
-
-    - name: Switch host to requested bootc image
+    - name: Upgrade bootc host image
       ansible.builtin.command:
-        cmd: "bootc switch {{ bootc_image_ref }}"
-      register: bootc_switch
-      changed_when: "'Queued for next boot' in bootc_switch.stdout or 'No changes' not in bootc_switch.stdout"
+        cmd: bootc upgrade
+      register: bootc_upgrade
+      changed_when: "'No changes' not in bootc_upgrade.stdout"
 
     - name: Reboot into new deployment
       ansible.builtin.reboot:
-      when: bootc_switch.changed
+      when: bootc_upgrade.changed

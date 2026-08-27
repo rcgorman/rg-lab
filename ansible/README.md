@@ -14,6 +14,7 @@ the bootc image; Ansible handles enrollment and application deployment.
 ## Playbooks
 
 - `playbooks/netbird.yml`: enroll bootc hosts with NetBird.
+- `playbooks/bootc_update.yml`: upgrade bootc hosts to the latest image they track.
 - `playbooks/semaphore.yml`: deploy Semaphore UI only.
 - `playbooks/vaultwarden.yml`: deploy Vaultwarden only.
 - `playbooks/site.yml`: run the current full site configuration.
