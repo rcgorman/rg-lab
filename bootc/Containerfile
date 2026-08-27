@@ -1,5 +1,6 @@
 FROM quay.io/almalinuxorg/almalinux-bootc:10.2
 
+# Netbird Repo
 COPY files/yum.repos.d/netbird.repo /etc/yum.repos.d/netbird.repo
 
 RUN dnf install -y \
@@ -27,6 +28,10 @@ RUN oscap xccdf eval --remediate \
     dnf remove -y openscap-scanner scap-security-guide \
     && dnf clean all
 
+# Podman user namespace mappings
+COPY files/subid/subuid /etc/subuid
+COPY files/subid/subgid /etc/subgid
+
 # Crypto policy
 RUN update-crypto-policies --set DEFAULT
 
@@ -41,5 +46,10 @@ RUN systemctl enable \
         netbird.service \
         qemu-guest-agent.service \
         selinux-lockdown.service
+
+# Firewall baseline
+RUN firewall-offline-cmd --zone=public --remove-service=cockpit || true \
+    && firewall-offline-cmd --zone=public --add-service=dhcpv6-client \
+    && firewall-offline-cmd --zone=public --add-service=ssh
 
 RUN bootc container lint

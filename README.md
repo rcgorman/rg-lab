@@ -21,7 +21,7 @@ After that, service deployment should be VM-by-VM:
 1. Terraform/OpenTofu creates or updates a VM from the bootc disk image.
 2. The VM joins the management network with NetBird.
 3. Semaphore runs an Ansible playbook against that VM.
-4. The playbook applies common host settings and then calls one role per service.
+4. The playbook enrolls or configures the VM, then calls one role per service.
 5. Service roles render Podman quadlets into `/etc/containers/systemd/`.
 
 ## Repository Layout
@@ -42,4 +42,3 @@ terraform/
 ```
 
 ## Deployment
-

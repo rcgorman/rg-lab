@@ -1,7 +1,4 @@
 ---
-- name: Configure base bootc hosts
-  ansible.builtin.import_playbook: base.yml
-
 - name: Enroll bootc hosts with NetBird
   ansible.builtin.import_playbook: netbird.yml
 
