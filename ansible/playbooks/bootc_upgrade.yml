@@ -1,5 +1,5 @@
 ---
-- name: Update bootc hosts
+- name: Upgrade bootc hosts
   hosts: bootc_hosts
   become: true
   tasks:

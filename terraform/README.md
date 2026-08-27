@@ -40,6 +40,18 @@ Check it with:
 pvesm list local --content import
 ```
 
+OpenTofu creates the `ansible` automation account through Proxmox cloud-init:
+
+```hcl
+ssh_public_keys = [
+  "ssh-ed25519 AAAA..."
+]
+```
+
+Human admin users are managed by Ansible so existing VMs can be updated without
+replacing them.
+
+
 ## Proxmox API Token
 
 Create a Proxmox API token for OpenTofu and pass it as:

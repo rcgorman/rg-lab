@@ -7,11 +7,14 @@ all:
       hosts:
         rg-semaphore01:
           ansible_host: 10.6.13.20
+        rg-identity01:
+          ansible_host: 10.6.13.21
     semaphore_hosts:
       hosts:
         rg-semaphore01:
-    secrets_hosts:
-      hosts: {}
+    identity_hosts:
+      hosts:
+        rg-identity01:
     data_hosts:
       hosts: {}
     apps_hosts:

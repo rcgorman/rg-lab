@@ -1,0 +1,6 @@
+---
+- name: Configure human admin users
+  hosts: bootc_hosts
+  become: true
+  roles:
+    - admin_users

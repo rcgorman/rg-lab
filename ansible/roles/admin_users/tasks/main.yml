@@ -1,0 +1,33 @@
+---
+- name: Ensure human admin users exist
+  ansible.builtin.user:
+    name: "{{ item.key }}"
+    groups: wheel
+    append: true
+    shell: /bin/bash
+    password: "{{ item.value.password_hash | default(omit) }}"
+    update_password: on_create
+  loop: "{{ admin_users | dict2items }}"
+  no_log: true
+
+- name: Ensure human admin SSH directories exist
+  ansible.builtin.file:
+    path: "/home/{{ item.key }}/.ssh"
+    state: directory
+    owner: "{{ item.key }}"
+    group: "{{ item.key }}"
+    mode: "0700"
+  loop: "{{ admin_users | dict2items }}"
+  no_log: true
+
+- name: Ensure human admin SSH keys exist
+  ansible.builtin.lineinfile:
+    path: "/home/{{ item.0.key }}/.ssh/authorized_keys"
+    line: "{{ item.1 }}"
+    state: present
+    create: true
+    owner: "{{ item.0.key }}"
+    group: "{{ item.0.key }}"
+    mode: "0600"
+  loop: "{{ admin_users | dict2items | subelements('value.ssh_public_keys') }}"
+  no_log: true

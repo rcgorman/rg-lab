@@ -28,10 +28,6 @@ RUN oscap xccdf eval --remediate \
     dnf remove -y openscap-scanner scap-security-guide \
     && dnf clean all
 
-# Podman user namespace mappings
-COPY files/subid/subuid /etc/subuid
-COPY files/subid/subgid /etc/subgid
-
 # Crypto policy
 RUN update-crypto-policies --set DEFAULT
 
