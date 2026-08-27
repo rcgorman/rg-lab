@@ -81,3 +81,5 @@ jobs:
 
       - name: Push commit tag
         run: sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman --root /mnt/containers-storage push "${IMAGE_SHA_REF}"
+        
+if: false
