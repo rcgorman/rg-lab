@@ -78,12 +78,13 @@ immich_quadlet_units:
           Network: immich.network
           NetworkAlias: immich-database
           Environment:
+            - POSTGRES_PASSWORD_FILE=/run/secrets/immich_db_password
             - POSTGRES_USER=postgres
             - POSTGRES_DB=immich
             - POSTGRES_INITDB_ARGS=--data-checksums
           Volume: immich-postgres:/var/lib/postgresql/data:idmap
           ShmSize: 128m
-          Secret: immich_db_password,type=env,target=POSTGRES_PASSWORD
+          Secret: immich_db_password,target=/run/secrets/immich_db_password
       - name: Service
         options:
           Restart: always
@@ -114,10 +115,11 @@ immich_quadlet_units:
             - IMMICH_VERSION=v3
             - DB_HOSTNAME=immich-database
             - DB_USERNAME=postgres
+            - DB_PASSWORD_FILE=/run/secrets/immich_db_password
             - DB_DATABASE_NAME=immich
             - REDIS_HOSTNAME=immich-redis
           Volume: immich-model-cache:/cache:idmap
-          Secret: immich_db_password,type=env,target=DB_PASSWORD
+          Secret: immich_db_password,target=/run/secrets/immich_db_password
       - name: Service
         options:
           Restart: always
@@ -149,11 +151,12 @@ immich_quadlet_units:
             - IMMICH_VERSION=v3
             - DB_HOSTNAME=immich-database
             - DB_USERNAME=postgres
+            - DB_PASSWORD_FILE=/run/secrets/immich_db_password
             - DB_DATABASE_NAME=immich
             - REDIS_HOSTNAME=immich-redis
           Volume:
             - immich-library:/data:idmap
-          Secret: immich_db_password,type=env,target=DB_PASSWORD
+          Secret: immich_db_password,target=/run/secrets/immich_db_password
       - name: Service
         options:
           Restart: always
