@@ -26,8 +26,8 @@ The bootc image owns baseline services and host settings such as chronyd,
 firewalld, qemu-guest-agent, and SELinux hardening. Mutable host configuration
 such as `containers` subuid/subgid mappings is handled by Ansible.
 
-Secrets should come from the shell during local testing and Semaphore environment secrets later.
-Service playbooks that need Podman secrets read them from environment variables
+Secrets should come from Semaphore environment secrets. 
+I might abandon Semaphore and use sops + age in the future.
+For now, service playbooks that need Podman secrets read them from environment variables
 and create Podman secrets on the target host before quadlets are started.
-Large NAS-backed app data is mounted with Podman named NFS volumes instead of
-host `/mnt/...` bind mounts.
+NAS-backed app data is mounted with Podman named NFS volumes instead of host `/mnt/...` bind mounts.
