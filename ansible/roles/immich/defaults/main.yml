@@ -20,8 +20,8 @@ immich_quadlet_units:
         options:
           VolumeName: immich-library
           Type: nfs
-          Device: ":/mnt/Storage/immich/library"
-          Options: addr=10.6.13.5,rw
+          Device: 10.6.13.5:/mnt/Storage/immich/library
+          Options: rw
 
   - name: immich-model-cache.volume
     enabled: false
@@ -68,6 +68,8 @@ immich_quadlet_units:
       - name: Unit
         options:
           Description: Immich Postgres
+          Requires: immich-postgres-volume.service
+          After: immich-postgres-volume.service
       - name: Container
         options:
           ContainerName: immich_postgres
@@ -79,7 +81,7 @@ immich_quadlet_units:
             - POSTGRES_USER=postgres
             - POSTGRES_DB=immich
             - POSTGRES_INITDB_ARGS=--data-checksums
-          Volume: immich-postgres.volume:/var/lib/postgresql/data:idmap
+          Volume: immich-postgres:/var/lib/postgresql/data:idmap
           ShmSize: 128m
           Secret: immich_db_password,type=env,target=POSTGRES_PASSWORD
       - name: Service
@@ -94,6 +96,8 @@ immich_quadlet_units:
       - name: Unit
         options:
           Description: Immich Machine Learning
+          Requires: immich-model-cache-volume.service
+          After: immich-model-cache-volume.service
       - name: Container
         options:
           ContainerName: immich_machine_learning
@@ -110,7 +114,7 @@ immich_quadlet_units:
             - IMMICH_VERSION=v3
             - DB_USERNAME=postgres
             - DB_DATABASE_NAME=immich
-          Volume: immich-model-cache.volume:/cache:idmap
+          Volume: immich-model-cache:/cache:idmap
           Secret: immich_db_password,type=env,target=DB_PASSWORD
       - name: Service
         options:
@@ -124,6 +128,8 @@ immich_quadlet_units:
       - name: Unit
         options:
           Description: Immich Server
+          Requires: immich-library-volume.service
+          After: immich-library-volume.service
       - name: Container
         options:
           ContainerName: immich_server
@@ -142,8 +148,7 @@ immich_quadlet_units:
             - DB_USERNAME=postgres
             - DB_DATABASE_NAME=immich
           Volume:
-            - immich-library.volume:/data:idmap
-            - /etc/localtime:/etc/localtime:ro
+            - immich-library:/data:idmap
           Secret: immich_db_password,type=env,target=DB_PASSWORD
       - name: Service
         options:

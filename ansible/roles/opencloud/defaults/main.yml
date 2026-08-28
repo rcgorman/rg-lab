@@ -20,8 +20,8 @@ opencloud_quadlet_units:
         options:
           VolumeName: opencloud-data
           Type: nfs
-          Device: ":/mnt/Storage/opencloud/data"
-          Options: addr=10.6.13.5,rw
+          Device: 10.6.13.5:/mnt/Storage/opencloud/data
+          Options: rw
 
   - name: opencloud-collabora.container
     sections:
@@ -59,6 +59,8 @@ opencloud_quadlet_units:
       - name: Unit
         options:
           Description: OpenCloud
+          Requires: opencloud-data-volume.service
+          After: opencloud-data-volume.service
       - name: Container
         options:
           ContainerName: opencloud
@@ -109,7 +111,7 @@ opencloud_quadlet_units:
           Secret: opencloud_admin_password,type=env,target=IDM_ADMIN_PASSWORD
           Volume:
             - /srv/quadlet/opencloud:/etc/opencloud:Z
-            - opencloud-data.volume:/var/lib/opencloud:idmap
+            - opencloud-data:/var/lib/opencloud:idmap
             - /srv/quadlet/opencloud/apps:/var/lib/opencloud/web/assets/apps:Z
       - name: Service
         options:
