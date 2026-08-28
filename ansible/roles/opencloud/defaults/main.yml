@@ -111,7 +111,7 @@ opencloud_quadlet_units:
           Secret: opencloud_admin_password,type=env,target=IDM_ADMIN_PASSWORD
           Volume:
             - /srv/quadlet/opencloud:/etc/opencloud:Z
-            - opencloud-data:/var/lib/opencloud:idmap
+            - opencloud-data.volume:/var/lib/opencloud:idmap
             - /srv/quadlet/opencloud/apps:/var/lib/opencloud/web/assets/apps:Z
       - name: Service
         options:

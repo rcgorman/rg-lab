@@ -82,7 +82,7 @@ immich_quadlet_units:
             - POSTGRES_USER=postgres
             - POSTGRES_DB=immich
             - POSTGRES_INITDB_ARGS=--data-checksums
-          Volume: immich-postgres:/var/lib/postgresql/data:idmap
+          Volume: immich-postgres.volume:/var/lib/postgresql/data:idmap
           ShmSize: 128m
           Secret: immich_db_password,target=/run/secrets/immich_db_password
       - name: Service
@@ -118,7 +118,7 @@ immich_quadlet_units:
             - DB_PASSWORD_FILE=/run/secrets/immich_db_password
             - DB_DATABASE_NAME=immich
             - REDIS_HOSTNAME=immich-redis
-          Volume: immich-model-cache:/cache:idmap
+          Volume: immich-model-cache.volume:/cache:idmap
           Secret: immich_db_password,target=/run/secrets/immich_db_password
       - name: Service
         options:
@@ -155,7 +155,7 @@ immich_quadlet_units:
             - DB_DATABASE_NAME=immich
             - REDIS_HOSTNAME=immich-redis
           Volume:
-            - immich-library:/data:idmap
+            - immich-library.volume:/data:idmap
           Secret: immich_db_password,target=/run/secrets/immich_db_password
       - name: Service
         options:
