@@ -1,0 +1,4 @@
+---
+- name: Add OpenCloud quadlet units
+  ansible.builtin.set_fact:
+    quadlet_units: "{{ (quadlet_units | default([])) + opencloud_quadlet_units }}"

@@ -1,0 +1,14 @@
+---
+- name: Deploy OpenCloud
+  hosts: data_hosts
+  become: true
+  vars:
+    podman_secrets:
+      opencloud_admin_password: "{{ lookup('env', 'OPENCLOUD_ADMIN_PASSWORD') }}"
+      opencloud_collabora_admin_password: "{{ lookup('env', 'OPENCLOUD_COLLABORA_ADMIN_PASSWORD') }}"
+      opencloud_collabora_proof_key: "{{ lookup('env', 'OPENCLOUD_COLLABORA_PROOF_KEY') }}"
+  roles:
+    - podman_subids
+    - podman_secrets
+    - opencloud
+    - podman_quadlet

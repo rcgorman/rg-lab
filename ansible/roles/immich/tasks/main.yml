@@ -1,0 +1,4 @@
+---
+- name: Add Immich quadlet units
+  ansible.builtin.set_fact:
+    quadlet_units: "{{ (quadlet_units | default([])) + immich_quadlet_units }}"

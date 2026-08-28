@@ -7,3 +7,9 @@
 
 - name: Deploy Vaultwarden
   ansible.builtin.import_playbook: vaultwarden.yml
+
+- name: Deploy Immich
+  ansible.builtin.import_playbook: immich.yml
+
+- name: Deploy OpenCloud
+  ansible.builtin.import_playbook: opencloud.yml

@@ -1,0 +1,139 @@
+---
+opencloud_quadlet_units:
+  - name: opencloud.network
+    enabled: false
+    sections:
+      - name: Unit
+        options:
+          Description: OpenCloud bridge network
+      - name: Network
+        options:
+          NetworkName: opencloud
+
+  - name: opencloud-config.volume
+    enabled: false
+    sections:
+      - name: Unit
+        options:
+          Description: OpenCloud config volume
+      - name: Volume
+        options:
+          VolumeName: opencloud-config
+
+  - name: opencloud-data.volume
+    enabled: false
+    sections:
+      - name: Unit
+        options:
+          Description: OpenCloud data volume
+      - name: Volume
+        options:
+          VolumeName: opencloud-data
+          Type: nfs
+          Device: ":/mnt/Storage/opencloud/data"
+          Options: addr=10.6.13.5,rw
+
+  - name: opencloud-apps.volume
+    enabled: false
+    sections:
+      - name: Unit
+        options:
+          Description: OpenCloud apps volume
+      - name: Volume
+        options:
+          VolumeName: opencloud-apps
+
+  - name: opencloud-collabora.container
+    sections:
+      - name: Unit
+        options:
+          Description: OpenCloud Collabora
+      - name: Container
+        options:
+          ContainerName: opencloud_collabora
+          Image: docker.io/collabora/code:26.04.2.4.1
+          AutoUpdate: registry
+          Pull: newer
+          Network: opencloud.network
+          NetworkAlias: collabora
+          PublishPort: "9980:9980"
+          AddCapability: CAP_SYS_ADMIN
+          SeccompProfile: unconfined
+          Environment:
+            - TZ=America/New_York
+            - aliasgroup1=https://cloud.internal.gormantech.com
+            - extra_params=--o:ssl.enable=true --o:ssl.ssl_verification=false --o:ssl.termination=false --o:server_name=collabora.internal.gormantech.com:443 --o:welcome.enable=false --o:net.frame_ancestors=cloud.internal.gormantech.com --o:net.lok_allow.host[14]=cloud.internal.gormantech.com --o:home_mode.enable=false
+            - username=admin
+          Secret:
+            - opencloud_collabora_admin_password,type=env,target=password
+            - opencloud_collabora_proof_key,type=mount,target=/etc/coolwsd/proof_key,uid=1001,gid=1001,mode=0400
+      - name: Service
+        options:
+          Restart: always
+      - name: Install
+        options:
+          WantedBy: multi-user.target
+
+  - name: opencloud.container
+    sections:
+      - name: Unit
+        options:
+          Description: OpenCloud
+      - name: Container
+        options:
+          ContainerName: opencloud
+          Image: docker.io/opencloudeu/opencloud-rolling:7.4.0
+          UserNS: auto
+          AutoUpdate: registry
+          Pull: newer
+          Network: opencloud.network
+          NetworkAlias: opencloud
+          PublishPort: "9200:9200"
+          Entrypoint: /bin/sh
+          Exec: -c "opencloud init || true; opencloud server"
+          Environment:
+            - TZ=America/New_York
+            - OC_ADD_RUN_SERVICES=collaboration
+            - OC_URL=https://cloud.internal.gormantech.com
+            - OC_LOG_LEVEL=info
+            - OC_LOG_COLOR=false
+            - OC_LOG_PRETTY=false
+            - PROXY_TLS=false
+            - PROXY_HTTP_ADDR=0.0.0.0:9200
+            - OC_INSECURE=false
+            - PROXY_ENABLE_BASIC_AUTH=false
+            - IDM_CREATE_DEMO_USERS=false
+            - FRONTEND_ARCHIVER_MAX_SIZE=10000000000
+            - FRONTEND_CHECK_FOR_UPDATES=true
+            - PROXY_CSP_CONFIG_FILE_LOCATION=/etc/opencloud/csp.yaml
+            - OC_PASSWORD_POLICY_BANNED_PASSWORDS_LIST=banned-password-list.txt
+            - OC_SHARING_PUBLIC_SHARE_MUST_HAVE_PASSWORD=true
+            - OC_SHARING_PUBLIC_WRITEABLE_SHARE_MUST_HAVE_PASSWORD=false
+            - OC_PASSWORD_POLICY_DISABLED=false
+            - OC_PASSWORD_POLICY_MIN_CHARACTERS=8
+            - OC_PASSWORD_POLICY_MIN_LOWERCASE_CHARACTERS=1
+            - OC_PASSWORD_POLICY_MIN_UPPERCASE_CHARACTERS=1
+            - OC_PASSWORD_POLICY_MIN_DIGITS=1
+            - OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS=1
+            - OC_DEFAULT_LANGUAGE=en
+            - COLLABORA_DOMAIN=collabora.internal.gormantech.com
+            - FRONTEND_APP_HANDLER_SECURE_VIEW_APP_ADDR=eu.opencloud.api.collaboration
+            - GRAPH_AVAILABLE_ROLES=b1e2218d-eef8-4d4c-b82d-0f1a1b48f3b5,a8d5fe5e-96e3-418d-825b-534dbdf22b99,fb6c3e19-e378-47e5-b277-9732f9de6e21,58c63c02-1d89-4572-916a-870abc5a1b7d,2d00ce52-1fc2-4dbc-8b95-a73b73395f5a,1c996275-f1c9-4e71-abdf-a42f6495e960,312c0871-5ef7-4b3a-85b6-0e4074c64049,aa97fe03-7980-45ac-9e50-b325749fd7e6
+            - COLLABORATION_WOPI_SRC=https://cloud.internal.gormantech.com
+            - COLLABORATION_APP_NAME=CollaboraOnline
+            - COLLABORATION_APP_PRODUCT=Collabora
+            - COLLABORATION_APP_ADDR=https://collabora.internal.gormantech.com
+            - COLLABORATION_APP_ICON=https://collabora.internal.gormantech.com/favicon.ico
+            - COLLABORATION_APP_INSECURE=true
+            - COLLABORATION_CS3API_DATAGATEWAY_INSECURE=true
+          Secret: opencloud_admin_password,type=env,target=IDM_ADMIN_PASSWORD
+          Volume:
+            - opencloud-config.volume:/etc/opencloud:idmap
+            - opencloud-data.volume:/var/lib/opencloud:idmap
+            - opencloud-apps.volume:/var/lib/opencloud/web/assets/apps:idmap
+      - name: Service
+        options:
+          Restart: always
+      - name: Install
+        options:
+          WantedBy: multi-user.target

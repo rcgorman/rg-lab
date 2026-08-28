@@ -10,6 +10,7 @@ RUN dnf install -y \
         firewalld \
         git \
         netbird \
+        nfs-utils \
         openscap-scanner \
         podman \
         python3 \

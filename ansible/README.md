@@ -18,6 +18,8 @@ the bootc image; Ansible handles enrollment and application deployment.
 - `playbooks/admin_users.yml`: configure human admin users.
 - `playbooks/semaphore.yml`: deploy Semaphore UI only.
 - `playbooks/vaultwarden.yml`: deploy Vaultwarden only.
+- `playbooks/immich.yml`: deploy Immich only.
+- `playbooks/opencloud.yml`: deploy OpenCloud only.
 - `playbooks/site.yml`: run the current full site configuration.
 
 The bootc image owns baseline services and host settings such as chronyd,
@@ -27,3 +29,5 @@ such as `containers` subuid/subgid mappings is handled by Ansible.
 Secrets should come from the shell during local testing and Semaphore environment secrets later.
 Service playbooks that need Podman secrets read them from environment variables
 and create Podman secrets on the target host before quadlets are started.
+Large NAS-backed app data is mounted with Podman named NFS volumes instead of
+host `/mnt/...` bind mounts.
