@@ -54,7 +54,7 @@ immich_quadlet_units:
           Image: docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
           UserNS: auto
           Network: immich.network
-          NetworkAlias: redis
+          NetworkAlias: immich-redis
           HealthCmd: redis-cli ping || exit 1
       - name: Service
         options:
@@ -76,7 +76,7 @@ immich_quadlet_units:
           Image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
           UserNS: auto
           Network: immich.network
-          NetworkAlias: database
+          NetworkAlias: immich-database
           Environment:
             - POSTGRES_USER=postgres
             - POSTGRES_DB=immich
@@ -112,8 +112,10 @@ immich_quadlet_units:
             - UPLOAD_LOCATION=./library
             - DB_DATA_LOCATION=./postgres
             - IMMICH_VERSION=v3
+            - DB_HOSTNAME=immich-database
             - DB_USERNAME=postgres
             - DB_DATABASE_NAME=immich
+            - REDIS_HOSTNAME=immich-redis
           Volume: immich-model-cache:/cache:idmap
           Secret: immich_db_password,type=env,target=DB_PASSWORD
       - name: Service
@@ -145,8 +147,10 @@ immich_quadlet_units:
             - UPLOAD_LOCATION=./library
             - DB_DATA_LOCATION=./postgres
             - IMMICH_VERSION=v3
+            - DB_HOSTNAME=immich-database
             - DB_USERNAME=postgres
             - DB_DATABASE_NAME=immich
+            - REDIS_HOSTNAME=immich-redis
           Volume:
             - immich-library:/data:idmap
           Secret: immich_db_password,type=env,target=DB_PASSWORD
