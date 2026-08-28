@@ -6,7 +6,6 @@
     podman_secrets:
       immich_db_password: "{{ lookup('env', 'IMMICH_DB_PASSWORD') }}"
   roles:
-    - podman_subids
     - podman_secrets
     - immich
     - podman_quadlet

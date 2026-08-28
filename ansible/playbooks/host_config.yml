@@ -1,0 +1,7 @@
+---
+- name: Configure mutable host settings
+  hosts: bootc_hosts
+  become: true
+  roles:
+    - firewall_baseline
+    - podman_subids

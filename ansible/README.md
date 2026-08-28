@@ -15,6 +15,7 @@ the bootc image; Ansible handles enrollment and application deployment.
 
 - `playbooks/netbird.yml`: enroll bootc hosts with NetBird.
 - `playbooks/bootc_update.yml`: upgrade bootc hosts to the latest image they track.
+- `playbooks/host_config.yml`: configure mutable host settings.
 - `playbooks/admin_users.yml`: configure human admin users.
 - `playbooks/semaphore.yml`: deploy Semaphore UI only.
 - `playbooks/vaultwarden.yml`: deploy Vaultwarden only.
@@ -22,9 +23,13 @@ the bootc image; Ansible handles enrollment and application deployment.
 - `playbooks/opencloud.yml`: deploy OpenCloud only.
 - `playbooks/site.yml`: run the current full site configuration.
 
+Run `playbooks/host_config.yml` once on a new bootc VM before deploying app
+playbooks directly. The full `site.yml` wrapper runs it first.
+
 The bootc image owns baseline services and host settings such as chronyd,
-firewalld, qemu-guest-agent, and SELinux hardening. Mutable host configuration
-such as `containers` subuid/subgid mappings is handled by Ansible.
+firewalld, qemu-guest-agent, SELinux hardening, and bootc-specific cloud-init
+defaults. Mutable host configuration such as firewall zone services and
+`containers` subuid/subgid mappings is handled by Ansible.
 
 Secrets should come from Semaphore environment secrets. 
 I might abandon Semaphore and use sops + age in the future.

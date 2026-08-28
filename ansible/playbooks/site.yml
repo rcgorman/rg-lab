@@ -1,4 +1,7 @@
 ---
+- name: Configure mutable host settings
+  ansible.builtin.import_playbook: host_config.yml
+
 - name: Enroll bootc hosts with NetBird
   ansible.builtin.import_playbook: netbird.yml
 

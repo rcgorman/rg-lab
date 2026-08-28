@@ -6,7 +6,6 @@
     podman_secrets:
       vaultwarden_admin_token: "{{ lookup('env', 'VAULTWARDEN_ADMIN_TOKEN') }}"
   roles:
-    - podman_subids
     - podman_secrets
     - vaultwarden
     - podman_quadlet

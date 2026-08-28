@@ -1,0 +1,5 @@
+---
+firewall_baseline_zone: public
+firewall_baseline_services:
+  - dhcpv6-client
+  - ssh

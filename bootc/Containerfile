@@ -22,6 +22,13 @@ RUN dnf install -y \
         vim-enhanced \
     && dnf clean all
 
+# Disable cloud-init root filesystem resizing for bootc/composefs
+RUN printf '%s\n' \
+        'growpart:' \
+        '  mode: "off"' \
+        'resize_rootfs: false' \
+        > /etc/cloud/cloud.cfg.d/99-bootc-disable-growpart.cfg
+
 # CIS Level 1 Server hardening
 RUN oscap xccdf eval --remediate \
         --profile xccdf_org.ssgproject.content_profile_cis_server_l1 \
@@ -43,10 +50,5 @@ RUN systemctl enable \
         netbird.service \
         qemu-guest-agent.service \
         selinux-lockdown.service
-
-# Firewall baseline
-RUN firewall-offline-cmd --zone=public --remove-service=cockpit || true \
-    && firewall-offline-cmd --zone=public --add-service=dhcpv6-client \
-    && firewall-offline-cmd --zone=public --add-service=ssh
 
 RUN bootc container lint

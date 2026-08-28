@@ -3,6 +3,5 @@
   hosts: semaphore_hosts
   become: true
   roles:
-    - podman_subids
     - semaphore
     - podman_quadlet
