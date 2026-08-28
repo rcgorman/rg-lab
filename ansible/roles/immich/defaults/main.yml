@@ -20,8 +20,8 @@ immich_quadlet_units:
         options:
           VolumeName: immich-library
           Type: nfs
-          Device: 10.6.13.5:/mnt/Storage/immich
-          Options: rw
+          Device: ":/mnt/Storage/immich"
+          Options: addr=10.6.13.5,rw
 
   - name: immich-model-cache.volume
     enabled: false
@@ -155,7 +155,7 @@ immich_quadlet_units:
             - DB_DATABASE_NAME=immich
             - REDIS_HOSTNAME=immich-redis
           Volume:
-            - immich-library.volume:/data:idmap
+            - immich-library.volume:/data
           Secret: immich_db_password,target=/run/secrets/immich_db_password
       - name: Service
         options:
