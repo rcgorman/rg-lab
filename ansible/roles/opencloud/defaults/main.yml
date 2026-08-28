@@ -20,8 +20,8 @@ opencloud_quadlet_units:
         options:
           VolumeName: opencloud-data
           Type: nfs
-          Device: ":/mnt/Storage/opencloud"
-          Options: addr=10.6.13.5,rw
+          Device: 10.6.13.5:/mnt/Storage/opencloud
+          Options: rw
 
   - name: opencloud-collabora.container
     sections:
