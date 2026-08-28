@@ -20,7 +20,7 @@ immich_quadlet_units:
         options:
           VolumeName: immich-library
           Type: nfs
-          Device: 10.6.13.5:/mnt/Storage/immich/library
+          Device: 10.6.13.5:/mnt/Storage/immich
           Options: rw
 
   - name: immich-model-cache.volume
