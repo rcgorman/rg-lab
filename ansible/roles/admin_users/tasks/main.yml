@@ -22,20 +22,20 @@
 - name: Read managed admin group members
   ansible.builtin.command:
     cmd: getent group lab-admins
-  register: admin_users_group
+  register: lab_admins_group
   changed_when: false
   failed_when: false
   when: admin_users_effective | length > 0
 
 - name: Set managed admin group facts
   ansible.builtin.set_fact:
-    admin_users_existing_names: >-
+    lab_admins_existing_names: >-
       {{
-        admin_users_group.stdout.split(':')[3].split(',')
-        if admin_users_group.rc == 0 and admin_users_group.stdout.split(':') | length > 3 and admin_users_group.stdout.split(':')[3] | length > 0
+        lab_admins_group.stdout.split(':')[3].split(',')
+        if lab_admins_group.rc == 0 and lab_admins_group.stdout.split(':') | length > 3 and lab_admins_group.stdout.split(':')[3] | length > 0
         else []
       }}
-    admin_users_desired_names: "{{ admin_users_effective.keys() | list }}"
+    lab_admins_desired_names: "{{ admin_users_effective.keys() | list }}"
   when: admin_users_effective | length > 0
 
 - name: Remove unmanaged human admin users
@@ -43,7 +43,7 @@
     name: "{{ item }}"
     state: absent
     remove: false
-  loop: "{{ admin_users_existing_names | default([]) | difference(admin_users_desired_names | default([])) }}"
+  loop: "{{ lab_admins_existing_names | default([]) | difference(lab_admins_desired_names | default([])) }}"
   when: admin_users_effective | length > 0
 
 - name: Ensure human admin users exist
