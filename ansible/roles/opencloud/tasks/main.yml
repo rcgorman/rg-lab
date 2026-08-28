@@ -1,4 +1,28 @@
 ---
+- name: Ensure OpenCloud config directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "1001"
+    group: "1001"
+    mode: "0755"
+  loop:
+    - /srv/quadlet/opencloud
+    - /srv/quadlet/opencloud/apps
+
+- name: Ensure OpenCloud config ownership
+  ansible.builtin.file:
+    path: /srv/quadlet/opencloud
+    state: directory
+    owner: "1001"
+    group: "1001"
+    recurse: true
+
+- name: Restore OpenCloud config SELinux labels
+  ansible.builtin.command:
+    cmd: restorecon -RF /srv/quadlet/opencloud
+  changed_when: false
+
 - name: Add OpenCloud quadlet units
   ansible.builtin.set_fact:
     quadlet_units: "{{ (quadlet_units | default([])) + opencloud_quadlet_units }}"

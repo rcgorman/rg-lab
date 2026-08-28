@@ -1,13 +1,62 @@
 ---
+- name: Reset effective human admin users
+  ansible.builtin.set_fact:
+    admin_users_effective: {}
+  no_log: true
+
+- name: Build effective human admin user list
+  ansible.builtin.set_fact:
+    admin_users_effective: "{{ admin_users_effective | combine({item.key: item.value}) }}"
+  loop: "{{ admin_users | dict2items }}"
+  when:
+    - item.value.ssh_public_keys | select('length') | list | length > 0
+    - item.value.password_hash | default('') | length > 0
+  no_log: true
+
+- name: Ensure managed admin group exists
+  ansible.builtin.group:
+    name: lab-admins
+    state: present
+  when: admin_users_effective | length > 0
+
+- name: Read managed admin group members
+  ansible.builtin.command:
+    cmd: getent group lab-admins
+  register: admin_users_group
+  changed_when: false
+  failed_when: false
+  when: admin_users_effective | length > 0
+
+- name: Set managed admin group facts
+  ansible.builtin.set_fact:
+    admin_users_existing_names: >-
+      {{
+        admin_users_group.stdout.split(':')[3].split(',')
+        if admin_users_group.rc == 0 and admin_users_group.stdout.split(':') | length > 3 and admin_users_group.stdout.split(':')[3] | length > 0
+        else []
+      }}
+    admin_users_desired_names: "{{ admin_users_effective.keys() | list }}"
+  when: admin_users_effective | length > 0
+
+- name: Remove unmanaged human admin users
+  ansible.builtin.user:
+    name: "{{ item }}"
+    state: absent
+    remove: false
+  loop: "{{ admin_users_existing_names | default([]) | difference(admin_users_desired_names | default([])) }}"
+  when: admin_users_effective | length > 0
+
 - name: Ensure human admin users exist
   ansible.builtin.user:
     name: "{{ item.key }}"
-    groups: wheel
+    groups:
+      - wheel
+      - lab-admins
     append: true
     shell: /bin/bash
     password: "{{ item.value.password_hash | default(omit) }}"
-    update_password: on_create
-  loop: "{{ admin_users | dict2items }}"
+    update_password: always
+  loop: "{{ admin_users_effective | dict2items }}"
   no_log: true
 
 - name: Ensure human admin SSH directories exist
@@ -17,17 +66,15 @@
     owner: "{{ item.key }}"
     group: "{{ item.key }}"
     mode: "0700"
-  loop: "{{ admin_users | dict2items }}"
+  loop: "{{ admin_users_effective | dict2items }}"
   no_log: true
 
-- name: Ensure human admin SSH keys exist
-  ansible.builtin.lineinfile:
-    path: "/home/{{ item.0.key }}/.ssh/authorized_keys"
-    line: "{{ item.1 }}"
-    state: present
-    create: true
-    owner: "{{ item.0.key }}"
-    group: "{{ item.0.key }}"
+- name: Configure human admin SSH keys
+  ansible.builtin.copy:
+    dest: "/home/{{ item.key }}/.ssh/authorized_keys"
+    content: "{{ item.value.ssh_public_keys | select('length') | join('\n') }}\n"
+    owner: "{{ item.key }}"
+    group: "{{ item.key }}"
     mode: "0600"
-  loop: "{{ admin_users | dict2items | subelements('value.ssh_public_keys') }}"
+  loop: "{{ admin_users_effective | dict2items }}"
   no_log: true

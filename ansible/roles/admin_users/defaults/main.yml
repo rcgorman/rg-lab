@@ -1,2 +1,6 @@
 ---
-admin_users: {}
+admin_users:
+  ryan:
+    ssh_public_keys:
+      - "{{ lookup('env', 'RYAN_SSH_PUBLIC_KEY') }}"
+    password_hash: "{{ lookup('env', 'RYAN_PASSWORD_HASH') }}"

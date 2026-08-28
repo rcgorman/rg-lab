@@ -35,4 +35,9 @@ Secrets should come from Semaphore environment secrets.
 I might abandon Semaphore and use sops + age in the future.
 For now, service playbooks that need Podman secrets read them from environment variables
 and create Podman secrets on the target host before quadlets are started.
+Add human admins in `roles/admin_users/defaults/main.yml`. Secret values should
+come from Semaphore environment secrets, such as `RYAN_SSH_PUBLIC_KEY` and
+`RYAN_PASSWORD_HASH`. The `admin_users` role manages users in the `lab-admins`
+group; removing a user from `admin_users` removes that managed account, but
+leaves unrelated users alone.
 NAS-backed app data is mounted with Podman named NFS volumes instead of host `/mnt/...` bind mounts.

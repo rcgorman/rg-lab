@@ -10,16 +10,6 @@ opencloud_quadlet_units:
         options:
           NetworkName: opencloud
 
-  - name: opencloud-config.volume
-    enabled: false
-    sections:
-      - name: Unit
-        options:
-          Description: OpenCloud config volume
-      - name: Volume
-        options:
-          VolumeName: opencloud-config
-
   - name: opencloud-data.volume
     enabled: false
     sections:
@@ -32,16 +22,6 @@ opencloud_quadlet_units:
           Type: nfs
           Device: ":/mnt/Storage/opencloud/data"
           Options: addr=10.6.13.5,rw
-
-  - name: opencloud-apps.volume
-    enabled: false
-    sections:
-      - name: Unit
-        options:
-          Description: OpenCloud apps volume
-      - name: Volume
-        options:
-          VolumeName: opencloud-apps
 
   - name: opencloud-collabora.container
     sections:
@@ -128,9 +108,9 @@ opencloud_quadlet_units:
             - COLLABORATION_CS3API_DATAGATEWAY_INSECURE=true
           Secret: opencloud_admin_password,type=env,target=IDM_ADMIN_PASSWORD
           Volume:
-            - opencloud-config.volume:/etc/opencloud:idmap
+            - /srv/quadlet/opencloud:/etc/opencloud:Z
             - opencloud-data.volume:/var/lib/opencloud:idmap
-            - opencloud-apps.volume:/var/lib/opencloud/web/assets/apps:idmap
+            - /srv/quadlet/opencloud/apps:/var/lib/opencloud/web/assets/apps:Z
       - name: Service
         options:
           Restart: always
