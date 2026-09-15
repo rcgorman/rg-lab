@@ -65,7 +65,7 @@ opencloud_quadlet_units:
         options:
           ContainerName: opencloud
           Image: docker.io/opencloudeu/opencloud-rolling:7.4.0
-          UserNS: auto
+          User: "3001:3001"
           AutoUpdate: registry
           Pull: newer
           Network: opencloud.network
