@@ -12,6 +12,13 @@
     - item.enabled | default(true)
     - item.name is match('.*\\.container$')
 
+- name: Restart quadlet dependency services
+  ansible.builtin.systemd:
+    name: "{{ item.service | default((item.name | regex_replace('\\.(container|network|volume|pod|image|build)$', '.service'))) }}"
+    state: restarted
+  loop: "{{ quadlet_units }}"
+  when: item.name is match('.*\\.(network|volume)$')
+
 - name: Restart quadlet services
   ansible.builtin.systemd:
     name: "{{ item.service | default((item.name | regex_replace('\\.(container|network|volume|pod|image|build)$', '.service'))) }}"

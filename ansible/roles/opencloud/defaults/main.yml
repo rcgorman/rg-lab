@@ -42,11 +42,11 @@ opencloud_quadlet_units:
           Environment:
             - TZ=America/New_York
             - aliasgroup1=https://cloud.internal.gormantech.com
-            - extra_params=--o:ssl.enable=true --o:ssl.ssl_verification=false --o:ssl.termination=false --o:server_name=collabora.internal.gormantech.com:443 --o:welcome.enable=false --o:net.frame_ancestors=cloud.internal.gormantech.com --o:net.lok_allow.host[14]=cloud.internal.gormantech.com --o:home_mode.enable=false
+            - extra_params=--o:ssl.enable=false --o:ssl.ssl_verification=false --o:ssl.termination=true --o:server_name=collabora.internal.gormantech.com:443 --o:welcome.enable=false --o:net.frame_ancestors=cloud.internal.gormantech.com --o:net.lok_allow.host[14]=cloud.internal.gormantech.com --o:home_mode.enable=false
             - username=admin
           Secret:
             - opencloud_collabora_admin_password,type=env,target=password
-            - opencloud_collabora_proof_key,type=mount,target=/etc/coolwsd/proof_key,uid=1001,gid=1001,mode=0400
+          Volume: /srv/quadlet/opencloud-collabora/proof_key:/etc/coolwsd/proof_key:Z,ro
       - name: Service
         options:
           Restart: always
