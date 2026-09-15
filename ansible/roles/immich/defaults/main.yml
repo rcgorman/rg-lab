@@ -138,7 +138,7 @@ immich_quadlet_units:
         options:
           ContainerName: immich_server
           Image: ghcr.io/immich-app/immich-server:v3
-          UserNS: auto
+          User: "3000:3000"
           AutoUpdate: registry
           Pull: newer
           Network: immich.network
