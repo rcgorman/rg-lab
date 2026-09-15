@@ -1,0 +1,9 @@
+---
+static_network_interface: eth0
+static_network_connection: "lab-static-{{ static_network_interface }}"
+static_network_prefix: 24
+static_network_gateway: 10.6.13.1
+static_network_dns:
+  - 10.6.13.1
+static_network_ipv4: "{{ ansible_host }}"
+static_network_cloud_init_connection: "cloud-init {{ static_network_interface }}"

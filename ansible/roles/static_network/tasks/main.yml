@@ -1,0 +1,50 @@
+---
+- name: Disable cloud-init network rendering
+  ansible.builtin.copy:
+    dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      network: {config: disabled}
+
+- name: Read NetworkManager connection names
+  ansible.builtin.command:
+    cmd: nmcli --terse --fields NAME connection show
+  register: static_network_connections
+  changed_when: false
+
+- name: Create static NetworkManager connection
+  ansible.builtin.command:
+    cmd: >-
+      nmcli connection add
+      type ethernet
+      ifname {{ static_network_interface }}
+      con-name {{ static_network_connection }}
+  when: static_network_connection not in static_network_connections.stdout_lines
+
+- name: Configure static NetworkManager connection
+  ansible.builtin.command:
+    cmd: >-
+      nmcli connection modify {{ static_network_connection }}
+      connection.autoconnect yes
+      connection.autoconnect-priority 100
+      ipv4.method manual
+      ipv4.addresses {{ static_network_ipv4 }}/{{ static_network_prefix }}
+      ipv4.gateway {{ static_network_gateway }}
+      ipv4.dns {{ static_network_dns | join(',') }}
+      ipv6.method auto
+  changed_when: true
+
+- name: Stop cloud-init connection from autoconnecting
+  ansible.builtin.command:
+    argv:
+      - nmcli
+      - connection
+      - modify
+      - "{{ static_network_cloud_init_connection }}"
+      - connection.autoconnect
+      - "no"
+      - connection.autoconnect-priority
+      - "-100"
+  when: static_network_cloud_init_connection in static_network_connections.stdout_lines
