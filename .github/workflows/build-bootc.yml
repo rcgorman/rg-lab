@@ -19,8 +19,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}/rg-lab
-  IMAGE_NAME: alma10-bootc
+  CONTAINERFILE: bootc/Containerfile
+  BUILD_CONTEXT: bootc
+  DEST_REGISTRY_HOST: ghcr.io
+  DEST_IMAGE: ${{ github.repository_owner }}/rg-lab/alma10-bootc
+  TAGLIST: latest sha-${{ github.sha }}
   REGISTRY_AUTH_FILE: /tmp/containers-auth.json
 
 jobs:
@@ -48,22 +51,22 @@ jobs:
           sudo apt-get clean
           df -h
 
-      - name: Set image tags
-        run: |
-          image_ref="${IMAGE_REGISTRY}/${IMAGE_NAME}"
-          echo "IMAGE_REF=${image_ref}:latest" >> "${GITHUB_ENV}"
-          echo "IMAGE_SHA_REF=${image_ref}:sha-${GITHUB_SHA}" >> "${GITHUB_ENV}"
-
       - name: Log in to GHCR
         uses: redhat-actions/podman-login@v1
         with:
-          registry: ghcr.io
+          registry: ${{ env.DEST_REGISTRY_HOST }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           auth_file_path: ${{ env.REGISTRY_AUTH_FILE }}
 
       - name: Build bootc image
         run: |
+          image_ref="${DEST_REGISTRY_HOST}/${DEST_IMAGE}"
+          tag_args=()
+          for tag in ${TAGLIST}; do
+            tag_args+=(--tag "${image_ref}:${tag}")
+          done
+
           sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman build \
             --security-opt=label=disable \
             --cap-add=all \
@@ -71,13 +74,13 @@ jobs:
             --arch=amd64 \
             --pull=newer \
             --root /mnt/containers-storage \
-            --tag "${IMAGE_REF}" \
-            --tag "${IMAGE_SHA_REF}" \
-            --file bootc/Containerfile \
-            bootc
+            "${tag_args[@]}" \
+            --file "${CONTAINERFILE}" \
+            "${BUILD_CONTEXT}"
 
-      - name: Push latest tag
-        run: sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman --root /mnt/containers-storage push "${IMAGE_REF}"
-
-      - name: Push commit tag
-        run: sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman --root /mnt/containers-storage push "${IMAGE_SHA_REF}"
+      - name: Push image tags
+        run: |
+          image_ref="${DEST_REGISTRY_HOST}/${DEST_IMAGE}"
+          for tag in ${TAGLIST}; do
+            sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman --root /mnt/containers-storage push "${image_ref}:${tag}"
+          done

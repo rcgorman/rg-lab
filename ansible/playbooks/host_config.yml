@@ -3,6 +3,4 @@
   hosts: bootc_hosts
   become: true
   roles:
-    - static_network
     - firewall_baseline
-    - podman_subids

@@ -29,6 +29,17 @@ RUN printf '%s\n' \
         'resize_rootfs: false' \
         > /etc/cloud/cloud.cfg.d/99-bootc-disable-growpart.cfg
 
+# Baseline users and Podman subuid/subgid mappings
+RUN groupadd --system lab-admins ; \
+    useradd --create-home --groups wheel --shell /bin/bash --comment "Ansible automation user" ansible ; \
+    useradd --create-home --groups wheel,lab-admins --shell /bin/bash --comment "Ryan Gorman" ryan ; \
+    chmod 0700 /home/ansible /home/ryan ; \
+    install -d -m 0750 /etc/sudoers.d ; \
+    printf 'ansible ALL=(ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/ansible ; \
+    chmod 0440 /etc/sudoers.d/ansible ; \
+    grep -q '^containers:' /etc/subuid || echo 'containers:2147483647:2147483648' >> /etc/subuid ; \
+    grep -q '^containers:' /etc/subgid || echo 'containers:2147483647:2147483648' >> /etc/subgid
+
 # CIS Level 1 Server hardening
 RUN oscap xccdf eval --remediate \
         --profile xccdf_org.ssgproject.content_profile_cis_server_l1 \
