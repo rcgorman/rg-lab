@@ -20,6 +20,7 @@ module "vm" {
   memory_mb    = each.value.memory_mb
   disk_size_gb = each.value.disk_size_gb
   bridge       = each.value.bridge
+  mac_address  = each.value.mac_address
   vlan_id      = each.value.vlan_id
   ipv4_address = each.value.ipv4_address
   ipv4_gateway = each.value.ipv4_gateway

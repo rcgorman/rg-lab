@@ -9,6 +9,7 @@ Keep this layer focused on infrastructure facts:
 - disk size
 - network and VLAN
 - static IP or cloud-init network config
+- stable primary-NIC MAC address
 - SSH key injection for the `ansible` user
 
 Application containers should not be defined here. They belong in Ansible roles as Podman quadlets.
@@ -27,6 +28,31 @@ The imported image can live on `local`, while created VM disks can live on a dif
 image_id     = "local:import/rg-lab-alma10_2-bootc.qcow2"
 datastore_id = "data"
 ```
+
+## Network Ownership
+
+Proxmox cloud-init is the only owner of VM hostnames, static addresses, gateways,
+DNS servers, and SSH key injection. The bootc image supplies cloud-init but
+contains no platform-specific datasource or per-host network profile. Ansible
+does not create or modify NetworkManager connections.
+
+Every VM has a stable, unique MAC address in `tofu.tfvars`. Keep those MACs when
+recreating a VM. The module validates duplicate IP and MAC values before apply.
+
+The provider does not wait for QEMU guest-agent to report an address because the
+address is already declared in OpenTofu and agent reporting can lag during first
+boot. This avoids treating a slow guest agent as a failed VM creation. Verify a
+new VM from its console or over SSH with:
+
+```bash
+cloud-init status --long
+nmcli connection show --active
+ip -4 address show dev eth0
+ip route
+```
+
+The active host connection should be `cloud-init eth0`; there should be no
+`lab-static-eth0` profile and no `99-disable-network-config.cfg` file.
 
 For Proxmox `local` directory storage, the import file should exist here:
 

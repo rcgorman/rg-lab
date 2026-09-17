@@ -14,7 +14,7 @@ the bootc image; Ansible handles enrollment and application deployment.
 ## Playbooks
 
 - `playbooks/netbird.yml`: enroll bootc hosts with NetBird.
-- `playbooks/bootc_update.yml`: upgrade bootc hosts to the latest image they track.
+- `playbooks/bootc_upgrade.yml`: upgrade bootc hosts to the latest image they track.
 - `playbooks/host_config.yml`: configure mutable host settings.
 - `playbooks/admin_users.yml`: configure human admin users.
 - `playbooks/semaphore.yml`: deploy Semaphore UI only.
@@ -32,6 +32,11 @@ defaults. It also owns baseline users and `containers` subuid/subgid mappings.
 The `ansible` account is created with passwordless sudo, but SSH keys and human
 password hashes are still injected outside the image. Mutable host configuration
 such as firewall zone services is handled by Ansible.
+
+Proxmox cloud-init exclusively owns host networking. Do not add NetworkManager
+profiles or disable cloud-init networking from Ansible. Bootc upgrades run one
+host at a time and verify that each host returns on its configured inventory IP
+before proceeding.
 
 Secrets should come from Semaphore environment secrets. 
 I might abandon Semaphore and use sops + age in the future.

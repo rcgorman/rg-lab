@@ -1,0 +1,55 @@
+proxmox_endpoint  = "https://10.6.13.10:8006/"
+proxmox_api_token = "terraform@pam!opentofu=replace-me"
+proxmox_insecure  = true
+
+node_name                    = "rg-pve01"
+proxmox_ssh_username         = "root"
+proxmox_ssh_private_key_path = "~/.ssh/id_ed25519_terraform"
+image_id                     = "local:import/rg-lab-alma10_2-bootc.qcow2"
+datastore_id                 = "storage"
+
+ssh_public_keys = [
+  "ssh-ed25519 replace-me",
+]
+
+vms = {
+  semaphore = {
+    vm_id        = 201
+    name         = "rg-semaphore01"
+    cpu_cores    = 2
+    memory_mb    = 4096
+    disk_size_gb = 40
+    bridge       = "vmbr0"
+    mac_address  = "02:52:00:00:02:01"
+    ipv4_address = "10.6.13.20/24"
+    ipv4_gateway = "10.6.13.1"
+    dns_servers  = ["10.6.13.1"]
+    tags         = ["ansible"]
+  }
+  identity = {
+    vm_id        = 202
+    name         = "rg-identity01"
+    cpu_cores    = 4
+    memory_mb    = 8192
+    disk_size_gb = 80
+    bridge       = "vmbr0"
+    mac_address  = "02:52:00:00:02:02"
+    ipv4_address = "10.6.13.21/24"
+    ipv4_gateway = "10.6.13.1"
+    dns_servers  = ["10.6.13.1"]
+    tags         = ["identity"]
+  }
+  data = {
+    vm_id        = 203
+    name         = "rg-data01"
+    cpu_cores    = 4
+    memory_mb    = 8192
+    disk_size_gb = 120
+    bridge       = "vmbr0"
+    mac_address  = "02:52:00:00:02:03"
+    ipv4_address = "10.6.13.22/24"
+    ipv4_gateway = "10.6.13.1"
+    dns_servers  = ["10.6.13.1"]
+    tags         = ["media", "files"]
+  }
+}

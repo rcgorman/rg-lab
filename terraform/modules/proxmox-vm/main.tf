@@ -8,12 +8,18 @@ resource "proxmox_virtual_environment_vm" "this" {
   machine = "q35"
   bios    = "ovmf"
 
+  boot_order = ["virtio0"]
+
   started         = var.started
   on_boot         = var.on_boot
   stop_on_destroy = true
 
   agent {
     enabled = true
+
+    wait_for_ip {
+      disabled = true
+    }
   }
 
   cpu {
@@ -41,6 +47,7 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   initialization {
     datastore_id = var.datastore_id
+    interface    = "ide2"
     upgrade      = false
 
     ip_config {
@@ -65,8 +72,11 @@ resource "proxmox_virtual_environment_vm" "this" {
   }
 
   network_device {
-    bridge  = var.bridge
-    vlan_id = var.vlan_id
+    bridge       = var.bridge
+    mac_address  = var.mac_address
+    model        = "virtio"
+    disconnected = false
+    vlan_id      = var.vlan_id
   }
 
   operating_system {

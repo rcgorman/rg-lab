@@ -60,6 +60,7 @@ variable "vms" {
     memory_mb    = optional(number, 2048)
     disk_size_gb = optional(number, 20)
     bridge       = optional(string, "vmbr0")
+    mac_address  = string
     vlan_id      = optional(number)
     ipv4_address = string
     ipv4_gateway = string
@@ -69,4 +70,14 @@ variable "vms" {
     tags         = optional(list(string), [])
   }))
   default = {}
+
+  validation {
+    condition     = length(distinct([for vm in values(var.vms) : vm.ipv4_address])) == length(var.vms)
+    error_message = "Every VM must have a unique ipv4_address."
+  }
+
+  validation {
+    condition     = length(distinct([for vm in values(var.vms) : lower(vm.mac_address)])) == length(var.vms)
+    error_message = "Every VM must have a unique mac_address."
+  }
 }

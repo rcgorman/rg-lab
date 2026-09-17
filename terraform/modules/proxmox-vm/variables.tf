@@ -53,6 +53,16 @@ variable "bridge" {
   default = "vmbr0"
 }
 
+variable "mac_address" {
+  description = "Stable, unique MAC address for the VM's primary NIC."
+  type        = string
+
+  validation {
+    condition     = can(regex("^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$", var.mac_address))
+    error_message = "mac_address must be six colon-separated hexadecimal octets."
+  }
+}
+
 variable "vlan_id" {
   type    = number
   default = null
@@ -60,10 +70,26 @@ variable "vlan_id" {
 
 variable "ipv4_address" {
   type = string
+
+  validation {
+    condition = (
+      can(regex("^[0-9]{1,3}(\\.[0-9]{1,3}){3}/[0-9]{1,2}$", var.ipv4_address)) &&
+      can(cidrhost(var.ipv4_address, 0))
+    )
+    error_message = "ipv4_address must use IPv4 CIDR notation, for example 10.6.13.20/24."
+  }
 }
 
 variable "ipv4_gateway" {
   type = string
+
+  validation {
+    condition = (
+      can(regex("^[0-9]{1,3}(\\.[0-9]{1,3}){3}$", var.ipv4_gateway)) &&
+      can(cidrhost("${var.ipv4_gateway}/32", 0))
+    )
+    error_message = "ipv4_gateway must be an IPv4 address without a prefix."
+  }
 }
 
 variable "dns_servers" {

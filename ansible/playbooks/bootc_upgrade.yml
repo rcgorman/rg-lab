@@ -2,7 +2,17 @@
 - name: Upgrade bootc hosts
   hosts: bootc_hosts
   become: true
+  order: sorted
+  serial: 1
+  any_errors_fatal: true
   tasks:
+    - name: Verify expected IPv4 address before upgrade
+      ansible.builtin.command:
+        cmd: ip -4 -o address show scope global
+      register: bootc_network_before
+      changed_when: false
+      failed_when: ansible_host not in bootc_network_before.stdout
+
     - name: Upgrade bootc host image
       ansible.builtin.command:
         cmd: bootc upgrade
@@ -12,3 +22,10 @@
     - name: Reboot into new deployment
       ansible.builtin.reboot:
       when: bootc_upgrade.changed
+
+    - name: Verify expected IPv4 address after upgrade
+      ansible.builtin.command:
+        cmd: ip -4 -o address show scope global
+      register: bootc_network_after
+      changed_when: false
+      failed_when: ansible_host not in bootc_network_after.stdout
