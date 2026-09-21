@@ -13,19 +13,6 @@ ssh_public_keys = [
 ]
 
 vms = {
-  semaphore = {
-    vm_id        = 201
-    name         = "rg-semaphore01"
-    cpu_cores    = 2
-    memory_mb    = 4096
-    disk_size_gb = 40
-    bridge       = "vmbr0"
-    mac_address  = "02:52:00:00:02:01"
-    ipv4_address = "10.6.13.20/24"
-    ipv4_gateway = "10.6.13.1"
-    dns_servers  = ["10.6.13.1"]
-    tags         = ["ansible"]
-  }
   identity = {
     vm_id        = 202
     name         = "rg-identity01"

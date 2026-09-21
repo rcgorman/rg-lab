@@ -2,11 +2,11 @@
 - name: Configure mutable host settings
   ansible.builtin.import_playbook: host_config.yml
 
+- name: Configure human admin users
+  ansible.builtin.import_playbook: admin_users.yml
+
 - name: Enroll bootc hosts with NetBird
   ansible.builtin.import_playbook: netbird.yml
-
-- name: Deploy Semaphore UI
-  ansible.builtin.import_playbook: semaphore.yml
 
 - name: Deploy Vaultwarden
   ansible.builtin.import_playbook: vaultwarden.yml

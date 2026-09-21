@@ -1,4 +1,21 @@
 ---
+- name: Enforce Ansible service account policy
+  ansible.builtin.user:
+    name: ansible
+    groups:
+      - wheel
+    append: true
+    shell: /bin/bash
+    password_lock: true
+
+- name: Ensure Ansible SSH directory permissions
+  ansible.builtin.file:
+    path: /home/ansible/.ssh
+    state: directory
+    owner: ansible
+    group: ansible
+    mode: "0700"
+
 - name: Reset effective human admin users
   ansible.builtin.set_fact:
     admin_users_effective: {}
@@ -50,11 +67,11 @@
   ansible.builtin.user:
     name: "{{ item.key }}"
     groups:
-      - wheel
       - lab-admins
-    append: true
+    append: false
     shell: /bin/bash
     password: "{{ item.value.password_hash | default(omit) }}"
+    password_lock: false
     update_password: always
   loop: "{{ admin_users_effective | dict2items }}"
   no_log: true

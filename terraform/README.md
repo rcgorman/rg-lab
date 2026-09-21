@@ -20,7 +20,7 @@ Application containers should not be defined here. They belong in Ansible roles 
 2. Convert the image to `qcow2`.
 3. Upload/import the disk into Proxmox storage so it has a file ID such as `local:import/rg-lab-alma10_2-bootc.qcow2`.
 4. Use OpenTofu to create workload VMs from that image.
-5. Use Semaphore/Ansible to enroll NetBird and deploy Podman quadlets.
+5. Run Ansible from the administrator workstation to enroll NetBird and deploy Podman quadlets.
 
 The imported image can live on `local`, while created VM disks can live on a different datastore such as `data`. The VM module imports the image with the provider's `import_from` disk attribute:
 

@@ -1,4 +1,6 @@
 ---
+vaultwarden_signups_allowed: false
+
 vaultwarden_quadlet_units:
   - name: vaultwarden.network
     enabled: false
@@ -37,7 +39,7 @@ vaultwarden_quadlet_units:
           Environment:
             - TZ=America/New_York
             - DOMAIN=https://vault.internal.gormantech.com
-            - SIGNUPS_ALLOWED=false
+            - SIGNUPS_ALLOWED={{ vaultwarden_signups_allowed | bool | lower }}
             - INVITATION_ORG_NAME=GormanTech
             - WEBSOCKET_ENABLED=true
             - WEB_VAULT_ENABLED=true

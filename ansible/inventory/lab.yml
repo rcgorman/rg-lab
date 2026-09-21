@@ -5,15 +5,10 @@ all:
   children:
     bootc_hosts:
       hosts:
-        rg-semaphore01:
-          ansible_host: 10.6.13.20
         rg-identity01:
           ansible_host: 10.6.13.21
         rg-data01:
           ansible_host: 10.6.13.22
-    semaphore_hosts:
-      hosts:
-        rg-semaphore01:
     identity_hosts:
       hosts:
         rg-identity01:

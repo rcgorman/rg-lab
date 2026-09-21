@@ -32,11 +32,17 @@ RUN printf '%s\n' \
 # Baseline users and Podman subuid/subgid mappings
 RUN groupadd --system lab-admins ; \
     useradd --create-home --groups wheel --shell /bin/bash --comment "Ansible automation user" ansible ; \
-    useradd --create-home --groups wheel,lab-admins --shell /bin/bash --comment "Ryan Gorman" ryan ; \
+    useradd --create-home --groups lab-admins --shell /bin/bash --comment "Ryan Gorman" ryan ; \
+    passwd --lock ansible ; \
+    passwd --lock ryan ; \
     chmod 0700 /home/ansible /home/ryan ; \
     install -d -m 0750 /etc/sudoers.d ; \
     printf 'ansible ALL=(ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/ansible ; \
+    printf '%%lab-admins ALL=(ALL) ALL\n' > /etc/sudoers.d/lab-admins ; \
     chmod 0440 /etc/sudoers.d/ansible ; \
+    chmod 0440 /etc/sudoers.d/lab-admins ; \
+    visudo --check --file=/etc/sudoers.d/ansible ; \
+    visudo --check --file=/etc/sudoers.d/lab-admins ; \
     grep -q '^containers:' /etc/subuid || echo 'containers:2147483647:2147483648' >> /etc/subuid ; \
     grep -q '^containers:' /etc/subgid || echo 'containers:2147483647:2147483648' >> /etc/subgid
 
@@ -49,6 +55,14 @@ RUN oscap xccdf eval --remediate \
 
 # Crypto policy
 RUN update-crypto-policies --set DEFAULT
+
+# SSH accepts keys only; human passwords are for console login and sudo
+RUN install -d -m 0755 /etc/ssh/sshd_config.d \
+    && printf '%s\n' \
+        'PasswordAuthentication no' \
+        'KbdInteractiveAuthentication no' \
+        'PermitRootLogin no' \
+        > /etc/ssh/sshd_config.d/20-rg-lab-auth.conf
 
 # SELinux lockdown service
 COPY files/kargs.d/01-selinux.toml /usr/lib/bootc/kargs.d/01-selinux.toml
