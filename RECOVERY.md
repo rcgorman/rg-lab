@@ -142,12 +142,10 @@ age-keygen -y "$HOME/.config/sops/age/keys.txt"
 Save `keys.txt` in Bitwarden. Put the public `age1...` recipient in `.sops.yaml`.
 Only the public recipient belongs in Git.
 
-Create the encrypted secrets file and edit its values through SOPS:
+Create or edit the encrypted secrets file through SOPS. The repository creation
+rule automatically selects the configured age recipient:
 
 ```bash
-sops encrypt \
-  --filename-override ansible/secrets.sops.yml \
-  ansible/secrets.example.yml > ansible/secrets.sops.yml
 sops ansible/secrets.sops.yml
 ```
 

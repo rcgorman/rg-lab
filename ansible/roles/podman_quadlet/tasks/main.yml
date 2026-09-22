@@ -15,10 +15,37 @@
     group: root
     mode: "0644"
   loop: "{{ quadlet_units }}"
-  notify:
-    - Reload systemd
-    - Reset failed quadlet services
-    - Restart quadlet services
+  register: podman_quadlet_render
 
-- name: Flush quadlet handlers
-  ansible.builtin.meta: flush_handlers
+- name: Reload systemd for changed quadlet units
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: podman_quadlet_render.changed
+
+- name: Restart changed quadlet dependency services
+  ansible.builtin.systemd:
+    name: "{{ item.service | default((item.name | regex_replace('\\.(container|network|volume|pod|image|build)$', '.service'))) }}"
+    state: restarted
+  loop: "{{ quadlet_units }}"
+  when:
+    - podman_quadlet_render.changed
+    - item.name is match('.*\\.(network|volume)$')
+
+- name: Reset failed quadlet services
+  ansible.builtin.command:
+    cmd: "systemctl reset-failed {{ item.service | default((item.name | regex_replace('\\.(container|network|volume|pod|image|build)$', '.service'))) }}"
+  loop: "{{ quadlet_units }}"
+  changed_when: false
+  when:
+    - item.enabled | default(true)
+    - item.name is match('.*\\.container$')
+
+- name: Reconcile quadlet services
+  ansible.builtin.systemd:
+    name: "{{ item.service | default((item.name | regex_replace('\\.(container|network|volume|pod|image|build)$', '.service'))) }}"
+    enabled: true
+    state: "{{ 'restarted' if podman_quadlet_render.changed or podman_quadlet_restart_required else 'started' }}"
+  loop: "{{ quadlet_units }}"
+  when:
+    - item.enabled | default(true)
+    - item.name is match('.*\\.container$')

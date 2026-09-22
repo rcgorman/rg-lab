@@ -16,82 +16,39 @@
     group: ansible
     mode: "0700"
 
-- name: Reset effective human admin users
-  ansible.builtin.set_fact:
-    admin_users_effective: {}
-  no_log: true
-
-- name: Build effective human admin user list
-  ansible.builtin.set_fact:
-    admin_users_effective: "{{ admin_users_effective | combine({item.key: item.value}) }}"
-  loop: "{{ admin_users | dict2items }}"
-  when:
-    - item.value.ssh_public_keys | select('length') | list | length > 0
-    - item.value.password_hash | default('') | length > 0
-  no_log: true
-
-- name: Ensure managed admin group exists
-  ansible.builtin.group:
-    name: lab-admins
-    state: present
-  when: admin_users_effective | length > 0
-
-- name: Read managed admin group members
-  ansible.builtin.command:
-    cmd: getent group lab-admins
-  register: lab_admins_group
-  changed_when: false
-  failed_when: false
-  when: admin_users_effective | length > 0
-
-- name: Set managed admin group facts
-  ansible.builtin.set_fact:
-    lab_admins_existing_names: >-
-      {{
-        lab_admins_group.stdout.split(':')[3].split(',')
-        if lab_admins_group.rc == 0 and lab_admins_group.stdout.split(':') | length > 3 and lab_admins_group.stdout.split(':')[3] | length > 0
-        else []
-      }}
-    lab_admins_desired_names: "{{ admin_users_effective.keys() | list }}"
-  when: admin_users_effective | length > 0
-
-- name: Remove unmanaged human admin users
+- name: Enforce Ryan account policy
   ansible.builtin.user:
-    name: "{{ item }}"
-    state: absent
-    remove: false
-  loop: "{{ lab_admins_existing_names | default([]) | difference(lab_admins_desired_names | default([])) }}"
-  when: admin_users_effective | length > 0
-
-- name: Ensure human admin users exist
-  ansible.builtin.user:
-    name: "{{ item.key }}"
+    name: ryan
     groups:
-      - lab-admins
+      - wheel
     append: false
     shell: /bin/bash
-    password: "{{ item.value.password_hash | default(omit) }}"
+
+- name: Configure Ryan password
+  ansible.builtin.user:
+    name: ryan
+    password: "{{ ryan_password_hash }}"
     password_lock: false
     update_password: always
-  loop: "{{ admin_users_effective | dict2items }}"
+  when: ryan_password_hash | length > 0
   no_log: true
 
-- name: Ensure human admin SSH directories exist
+- name: Ensure Ryan SSH directory exists
   ansible.builtin.file:
-    path: "/home/{{ item.key }}/.ssh"
+    path: /home/ryan/.ssh
     state: directory
-    owner: "{{ item.key }}"
-    group: "{{ item.key }}"
+    owner: ryan
+    group: ryan
     mode: "0700"
-  loop: "{{ admin_users_effective | dict2items }}"
+  when: ryan_ssh_public_key | length > 0
   no_log: true
 
-- name: Configure human admin SSH keys
+- name: Configure Ryan SSH key
   ansible.builtin.copy:
-    dest: "/home/{{ item.key }}/.ssh/authorized_keys"
-    content: "{{ item.value.ssh_public_keys | select('length') | join('\n') }}\n"
-    owner: "{{ item.key }}"
-    group: "{{ item.key }}"
+    dest: /home/ryan/.ssh/authorized_keys
+    content: "{{ ryan_ssh_public_key }}\n"
+    owner: ryan
+    group: ryan
     mode: "0600"
-  loop: "{{ admin_users_effective | dict2items }}"
+  when: ryan_ssh_public_key | length > 0
   no_log: true

@@ -1,6 +1,3 @@
 ---
-admin_users:
-  ryan:
-    ssh_public_keys:
-      - "{{ lookup('env', 'RYAN_SSH_PUBLIC_KEY') }}"
-    password_hash: "{{ lookup('env', 'RYAN_PASSWORD_HASH') }}"
+ryan_ssh_public_key: "{{ lookup('env', 'RYAN_SSH_PUBLIC_KEY') }}"
+ryan_password_hash: "{{ lookup('env', 'RYAN_PASSWORD_HASH') }}"

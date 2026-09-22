@@ -1,2 +1,3 @@
 ansible/secrets.plain.yml
 age-key.txt
+.DS_Store

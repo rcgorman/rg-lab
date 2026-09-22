@@ -10,6 +10,30 @@
     - /srv/quadlet/opencloud
     - /srv/quadlet/opencloud/apps
 
+- name: Install OpenCloud content security policy
+  ansible.builtin.template:
+    src: csp.yaml.j2
+    dest: /srv/quadlet/opencloud/csp.yaml
+    owner: "3001"
+    group: "3001"
+    mode: "0644"
+  register: opencloud_csp
+
+- name: Install OpenCloud application registry
+  ansible.builtin.template:
+    src: app-registry.yaml.j2
+    dest: /srv/quadlet/opencloud/app-registry.yaml
+    owner: "3001"
+    group: "3001"
+    mode: "0644"
+  register: opencloud_app_registry
+
+- name: Record OpenCloud configuration changes
+  ansible.builtin.set_fact:
+    podman_quadlet_restart_required: true
+  when:
+    - opencloud_csp.changed or opencloud_app_registry.changed
+
 - name: Ensure OpenCloud config ownership
   ansible.builtin.file:
     path: /srv/quadlet/opencloud
@@ -18,29 +42,9 @@
     group: "3001"
     recurse: true
 
-- name: Ensure Collabora config directory exists
-  ansible.builtin.file:
-    path: /srv/quadlet/opencloud-collabora
-    state: directory
-    owner: "1001"
-    group: "1001"
-    mode: "0750"
-
-- name: Generate Collabora proof key
-  ansible.builtin.command:
-    cmd: openssl genrsa -out /srv/quadlet/opencloud-collabora/proof_key 4096
-    creates: /srv/quadlet/opencloud-collabora/proof_key
-
-- name: Ensure Collabora proof key ownership
-  ansible.builtin.file:
-    path: /srv/quadlet/opencloud-collabora/proof_key
-    owner: "1001"
-    group: "1001"
-    mode: "0400"
-
 - name: Restore OpenCloud config SELinux labels
   ansible.builtin.command:
-    cmd: restorecon -RF /srv/quadlet/opencloud /srv/quadlet/opencloud-collabora
+    cmd: restorecon -RF /srv/quadlet/opencloud
   changed_when: false
 
 - name: Add OpenCloud quadlet units

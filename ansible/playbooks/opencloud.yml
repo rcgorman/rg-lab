@@ -1,11 +1,11 @@
 ---
-- name: Deploy OpenCloud
+- name: Deploy OpenCloud with OnlyOffice
   hosts: data_hosts
   become: true
   vars:
     podman_secrets:
       opencloud_admin_password: "{{ lookup('env', 'OPENCLOUD_ADMIN_PASSWORD') }}"
-      opencloud_collabora_admin_password: "{{ lookup('env', 'OPENCLOUD_COLLABORA_ADMIN_PASSWORD') }}"
+      onlyoffice_jwt_secret: "{{ lookup('env', 'ONLYOFFICE_JWT_SECRET') }}"
   roles:
     - podman_secrets
     - opencloud

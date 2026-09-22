@@ -14,5 +14,5 @@
 - name: Deploy Immich
   ansible.builtin.import_playbook: immich.yml
 
-- name: Deploy OpenCloud
+- name: Deploy OpenCloud with OnlyOffice
   ansible.builtin.import_playbook: opencloud.yml

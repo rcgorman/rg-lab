@@ -19,6 +19,7 @@
 - name: Remove Podman secrets when recreation is enabled
   ansible.builtin.command:
     cmd: "podman secret rm {{ item.item.key }}"
+  register: podman_secret_remove
   when:
     - podman_secrets_recreate | bool
     - item.rc == 0
@@ -29,6 +30,14 @@
   ansible.builtin.command:
     cmd: "podman secret create {{ item.item.key }} -"
     stdin: "{{ item.item.value }}"
+    stdin_add_newline: false
+  register: podman_secret_create
   when: item.rc != 0 or podman_secrets_recreate | bool
   loop: "{{ podman_secret_inspect.results }}"
   no_log: true
+
+- name: Record Podman secret changes
+  ansible.builtin.set_fact:
+    podman_quadlet_restart_required: true
+  when:
+    - podman_secret_remove.changed or podman_secret_create.changed
