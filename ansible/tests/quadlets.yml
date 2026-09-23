@@ -1,0 +1,81 @@
+---
+- name: Check application definitions without connecting to a VM
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    apps: [vaultwarden, immich, opencloud]
+    podman_secrets_create:
+      changed: false
+    opencloud_csp:
+      changed: false
+    opencloud_app_registry:
+      changed: false
+    opencloud_config_ownership:
+      changed: false
+    helper: "{{ lookup('template', '../roles/podman_quadlet/tasks/main.yml') | from_yaml }}"
+  tasks:
+    - name: Check each role passes its own units and restart decision
+      ansible.builtin.assert:
+        that:
+          - app_tasks[0]['ansible.builtin.include_role'].name == 'podman_secrets'
+          - app_tasks[-1]['ansible.builtin.include_role'].name == 'podman_quadlet'
+          - app_tasks | selectattr('ansible.builtin.set_fact', 'defined') | list | length == 0
+          - not deployment.podman_quadlet_restart_required | bool
+          - deployment.podman_quadlet_units | length == expected_counts[item]
+          - deployment.podman_quadlet_units | map(attribute='name') | unique | length == deployment.podman_quadlet_units | length
+          - deployment.podman_quadlet_units | selectattr('content', 'undefined') | list | length == 0
+      vars:
+        app_tasks: "{{ lookup('template', '../roles/' ~ item ~ '/tasks/main.yml') | from_yaml }}"
+        deployment: "{{ app_tasks[-1].vars }}"
+        expected_counts:
+          vaultwarden: 3
+          immich: 8
+          opencloud: 8
+      loop: "{{ apps }}"
+
+    - name: Check named storage and network references resolve within each stack
+      ansible.builtin.assert:
+        that:
+          - volume_references | difference(unit_names) | length == 0
+          - network_references | difference(unit_names) | length == 0
+          - containers | length == wanted_by | length
+      vars:
+        app_tasks: "{{ lookup('template', '../roles/' ~ item ~ '/tasks/main.yml') | from_yaml }}"
+        units: "{{ app_tasks[-1].vars.podman_quadlet_units }}"
+        unit_names: "{{ units | map(attribute='name') | list }}"
+        content: "{{ units | map(attribute='content') | join('\n') }}"
+        volume_references: "{{ content | regex_findall('(?m)^Volume=([^:]+\\.volume):') }}"
+        network_references: "{{ content | regex_findall('(?m)^Network=(.+\\.network)$') }}"
+        containers: "{{ units | selectattr('name', 'search', '\\.container$') | list }}"
+        wanted_by: "{{ content | regex_findall('(?m)^WantedBy=multi-user.target$') }}"
+      loop: "{{ apps }}"
+
+    - name: Check new secrets request a restart for each stack
+      ansible.builtin.assert:
+        that: deployment.podman_quadlet_restart_required | bool
+      vars:
+        app_tasks: "{{ lookup('template', '../roles/' ~ item ~ '/tasks/main.yml') | from_yaml }}"
+        deployment: "{{ app_tasks[-1].vars }}"
+        podman_secrets_create:
+          changed: true
+      loop: "{{ apps }}"
+
+    - name: Check the helper starts only generated container services
+      ansible.builtin.assert:
+        that:
+          - helper[-1]['ansible.builtin.systemd'].enabled is not defined
+          - helper[-1]['ansible.builtin.systemd'].name == 'example.service'
+          - helper[-1]['ansible.builtin.systemd'].state == 'started'
+          - helper[-1].loop | from_yaml | map(attribute='name') | list == ['example.container']
+      vars:
+        item:
+          name: example.container
+          content: ""
+        podman_quadlet_units:
+          - name: example.network
+          - name: example-data.volume
+          - name: example.container
+        podman_quadlet_render:
+          changed: false
+        podman_quadlet_restart_required: false

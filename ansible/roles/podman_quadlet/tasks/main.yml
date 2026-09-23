@@ -8,44 +8,38 @@
     mode: "0755"
 
 - name: Render quadlet units
-  ansible.builtin.template:
-    src: quadlet.unit.j2
+  ansible.builtin.copy:
+    content: "{{ item.content }}"
     dest: "/etc/containers/systemd/{{ item.name }}"
     owner: root
     group: root
     mode: "0644"
-  loop: "{{ quadlet_units }}"
+  loop: "{{ podman_quadlet_units }}"
+  loop_control:
+    label: "{{ item.name }}"
   register: podman_quadlet_render
 
-- name: Reload systemd for changed quadlet units
+# Always reload so a rerun also recovers an interrupted deployment.
+- name: Generate systemd services from Quadlets
   ansible.builtin.systemd:
     daemon_reload: true
-  when: podman_quadlet_render.changed
-
-- name: Restart changed quadlet dependency services
-  ansible.builtin.systemd:
-    name: "{{ item.service | default((item.name | regex_replace('\\.(container|network|volume|pod|image|build)$', '.service'))) }}"
-    state: restarted
-  loop: "{{ quadlet_units }}"
-  when:
-    - podman_quadlet_render.changed
-    - item.name is match('.*\\.(network|volume)$')
+  changed_when: false
 
 - name: Reset failed quadlet services
   ansible.builtin.command:
-    cmd: "systemctl reset-failed {{ item.service | default((item.name | regex_replace('\\.(container|network|volume|pod|image|build)$', '.service'))) }}"
-  loop: "{{ quadlet_units }}"
+    argv:
+      - systemctl
+      - reset-failed
+      - "{{ item.name | regex_replace('\\.container$', '.service') }}"
+  loop: "{{ podman_quadlet_units | selectattr('name', 'search', '\\.container$') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
   changed_when: false
-  when:
-    - item.enabled | default(true)
-    - item.name is match('.*\\.container$')
 
 - name: Reconcile quadlet services
   ansible.builtin.systemd:
-    name: "{{ item.service | default((item.name | regex_replace('\\.(container|network|volume|pod|image|build)$', '.service'))) }}"
-    enabled: true
-    state: "{{ 'restarted' if podman_quadlet_render.changed or podman_quadlet_restart_required else 'started' }}"
-  loop: "{{ quadlet_units }}"
-  when:
-    - item.enabled | default(true)
-    - item.name is match('.*\\.container$')
+    name: "{{ item.name | regex_replace('\\.container$', '.service') }}"
+    state: "{{ 'restarted' if podman_quadlet_render.changed or podman_quadlet_restart_required | bool else 'started' }}"
+  loop: "{{ podman_quadlet_units | selectattr('name', 'search', '\\.container$') | list }}"
+  loop_control:
+    label: "{{ item.name }}"

@@ -1,7 +1,8 @@
 # Homelab Recovery
 
 This runbook assumes every workload VM is gone or inaccessible, but Proxmox,
-GitHub, the NAS, Bitwarden, and an administrator workstation are available.
+GitHub, the NAS, and an administrator workstation are available. Recovery must
+not depend on the Vaultwarden instance being recovered.
 
 ## Recovery Kit
 
@@ -10,24 +11,40 @@ Keep these items outside the workload VMs:
 - The Terraform API token and Proxmox SSH private key.
 - `terraform/tofu.tfvars` and the latest OpenTofu state backup.
 - The SSH private key matching `ssh_public_keys` in `tofu.tfvars`.
-- The age private key, stored as a secure attachment in Bitwarden.
+- The age private key in an independently accessible, encrypted recovery kit.
 - The encrypted `ansible/secrets.sops.yml` file committed to Git.
 - Backups of local stateful Podman volumes.
 - OpenCloud configuration files from `/srv/quadlet/opencloud`.
 
+Keep an offline or otherwise independent copy of that kit, including the SSH
+keys, API token, state, and any backup-repository password. Bitwarden can hold an
+additional copy, but must not be the only way to obtain recovery credentials.
+Protect state and `tfvars` as secrets. Neither belongs in Git.
+
 The required local volume backups are:
 
 - `vaultwarden-data`.
-- `immich-postgres`.
+- A consistent Immich Postgres backup, preferably its native database dump,
+  matched with the corresponding NAS library data and recorded image versions.
+- `onlyoffice-data`, `onlyoffice-lib`, `onlyoffice-postgres`, and
+  `onlyoffice-rabbitmq` if preserving the complete document-server installation.
 
 Immich library data and OpenCloud application data are already stored on the
 NAS, but their database or configuration still needs to be recoverable.
+An Immich photo directory alone does not restore accounts, albums, or its asset
+index. Stop the relevant stack before a raw volume backup; copying a live
+database directory is not a consistent database backup. The machine-learning
+cache is rebuildable and does not need a recovery backup.
+
+The NAS is the initial backup destination, not yet an independent copy of data
+already stored there. Backup automation and a test restore are still required.
 
 ## Build The Image
 
 1. Push the desired bootc configuration and wait for the GitHub Actions image
    build to complete.
-2. Pull the OCI image on an AMD64 Linux system and create the QCOW2 with
+2. Record the image digest or unique `build-<run-id>-<attempt>` tag. Pull that
+   OCI image on an AMD64 Linux system and create the QCOW2 with
    `bootc-image-builder`.
 3. Copy it to `/var/lib/vz/import/rg-lab-alma10_2-bootc.qcow2` on Proxmox.
 4. Confirm it with `pvesm list local --content import`.
@@ -65,7 +82,8 @@ Install `sops` and `age` on the administrator workstation. On macOS:
 brew install age sops
 ```
 
-Restore the age key from Bitwarden to `~/.config/sops/age/keys.txt`. The private
+Restore the age key from the independent recovery kit to
+`~/.config/sops/age/keys.txt` and set its permissions to `0600`. The private
 key must never be committed to Git or copied to a managed host.
 
 The repository contains `.sops.yaml` with only the public age recipient and an
@@ -139,7 +157,8 @@ chmod 600 "$HOME/.config/sops/age/keys.txt"
 age-keygen -y "$HOME/.config/sops/age/keys.txt"
 ```
 
-Save `keys.txt` in Bitwarden. Put the public `age1...` recipient in `.sops.yaml`.
+Save `keys.txt` in the independent recovery kit and optionally Bitwarden. Put
+the public `age1...` recipient in `.sops.yaml`.
 Only the public recipient belongs in Git.
 
 Create or edit the encrypted secrets file through SOPS. The repository creation

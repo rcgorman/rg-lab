@@ -4,40 +4,26 @@
     that:
       - item.value | length > 0
     fail_msg: "Missing value for Podman secret {{ item.key }}"
-  loop: "{{ podman_secrets | dict2items }}"
+  loop: "{{ podman_secrets_values | dict2items }}"
   no_log: true
 
 - name: Inspect Podman secrets
   ansible.builtin.command:
     cmd: "podman secret inspect {{ item.key }}"
-  register: podman_secret_inspect
+  register: podman_secrets_inspect
   changed_when: false
+  check_mode: false
   failed_when: false
-  loop: "{{ podman_secrets | dict2items }}"
+  loop: "{{ podman_secrets_values | dict2items }}"
   no_log: true
 
-- name: Remove Podman secrets when recreation is enabled
+- name: Create missing or explicitly replaced Podman secrets
   ansible.builtin.command:
-    cmd: "podman secret rm {{ item.item.key }}"
-  register: podman_secret_remove
-  when:
-    - podman_secrets_recreate | bool
-    - item.rc == 0
-  loop: "{{ podman_secret_inspect.results }}"
-  no_log: true
-
-- name: Create missing Podman secrets
-  ansible.builtin.command:
-    cmd: "podman secret create {{ item.item.key }} -"
+    argv: "{{ ['podman', 'secret', 'create'] + (['--replace'] if podman_secrets_recreate | bool else []) + [item.item.key, '-'] }}"
     stdin: "{{ item.item.value }}"
     stdin_add_newline: false
-  register: podman_secret_create
+  register: podman_secrets_create
+  changed_when: true
   when: item.rc != 0 or podman_secrets_recreate | bool
-  loop: "{{ podman_secret_inspect.results }}"
+  loop: "{{ podman_secrets_inspect.results }}"
   no_log: true
-
-- name: Record Podman secret changes
-  ansible.builtin.set_fact:
-    podman_quadlet_restart_required: true
-  when:
-    - podman_secret_remove.changed or podman_secret_create.changed

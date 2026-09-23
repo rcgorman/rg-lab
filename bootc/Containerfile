@@ -3,7 +3,8 @@ FROM quay.io/almalinuxorg/almalinux-bootc:10.2
 # Netbird Repo
 COPY files/yum.repos.d/netbird.repo /etc/yum.repos.d/netbird.repo
 
-RUN dnf install -y \
+RUN dnf upgrade -y \
+    && dnf install -y \
         bash-completion \
         chrony \
         cloud-init \
@@ -30,7 +31,8 @@ RUN printf '%s\n' \
         > /etc/cloud/cloud.cfg.d/99-bootc-disable-growpart.cfg
 
 # Baseline users and Podman subuid/subgid mappings
-RUN useradd --create-home --groups wheel --shell /bin/bash --comment "Ansible automation user" ansible ; \
+RUN set -eu; \
+    useradd --create-home --groups wheel --shell /bin/bash --comment "Ansible automation user" ansible ; \
     useradd --create-home --groups wheel --shell /bin/bash --comment "Ryan Gorman" ryan ; \
     passwd --lock ansible ; \
     passwd --lock ryan ; \
@@ -42,10 +44,20 @@ RUN useradd --create-home --groups wheel --shell /bin/bash --comment "Ansible au
     grep -q '^containers:' /etc/subuid || echo 'containers:2147483647:2147483648' >> /etc/subuid ; \
     grep -q '^containers:' /etc/subgid || echo 'containers:2147483647:2147483648' >> /etc/subgid
 
-# CIS Level 1 Server hardening
-RUN oscap xccdf eval --remediate \
+# CIS Level 1 Server remediation; exit 2 means findings, not a scanner failure.
+# Keep the report: a container build cannot verify every running-host control.
+RUN set -eu; \
+    install -d -m 0755 /usr/share/rg-lab; \
+    scan_status=0; \
+    oscap xccdf eval --remediate \
         --profile xccdf_org.ssgproject.content_profile_cis_server_l1 \
-        /usr/share/xml/scap/ssg/content/ssg-almalinux10-ds.xml ; \
+        --report /usr/share/rg-lab/cis-server-l1.html \
+        /usr/share/xml/scap/ssg/content/ssg-almalinux10-ds.xml || scan_status=$?; \
+    case "$scan_status" in \
+        0) ;; \
+        2) echo 'CIS findings remain; review cis-server-l1.html and audit the booted host.' ;; \
+        *) exit "$scan_status" ;; \
+    esac; \
     dnf remove -y openscap-scanner scap-security-guide \
     && dnf clean all
 

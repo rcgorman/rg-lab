@@ -12,7 +12,7 @@ variable "proxmox_api_token" {
 variable "proxmox_insecure" {
   description = "Allow insecure TLS when Proxmox uses a self-signed certificate."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "node_name" {
@@ -72,12 +72,38 @@ variable "vms" {
   default = {}
 
   validation {
-    condition     = length(distinct([for vm in values(var.vms) : vm.ipv4_address])) == length(var.vms)
+    condition     = length(distinct([for vm in values(var.vms) : split("/", vm.ipv4_address)[0]])) == length(var.vms)
     error_message = "Every VM must have a unique ipv4_address."
   }
 
   validation {
     condition     = length(distinct([for vm in values(var.vms) : lower(vm.mac_address)])) == length(var.vms)
     error_message = "Every VM must have a unique mac_address."
+  }
+
+  validation {
+    condition     = alltrue([for vm in values(var.vms) : can(regex("^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$", vm.mac_address))])
+    error_message = "Each mac_address must be six colon-separated hexadecimal octets."
+  }
+
+  validation {
+    condition = alltrue([for vm in values(var.vms) :
+      can(regex("^[0-9]{1,3}(\\.[0-9]{1,3}){3}/[0-9]{1,2}$", vm.ipv4_address)) &&
+      can(cidrhost(vm.ipv4_address, 0))
+    ])
+    error_message = "Each ipv4_address must use IPv4 CIDR notation, for example 10.6.13.21/24."
+  }
+
+  validation {
+    condition = alltrue([for vm in values(var.vms) :
+      can(regex("^[0-9]{1,3}(\\.[0-9]{1,3}){3}$", vm.ipv4_gateway)) &&
+      can(cidrhost("${vm.ipv4_gateway}/32", 0))
+    ])
+    error_message = "Each ipv4_gateway must be an IPv4 address without a prefix."
+  }
+
+  validation {
+    condition     = length(distinct([for vm in values(var.vms) : vm.vm_id])) == length(var.vms)
+    error_message = "Every VM must have a unique vm_id."
   }
 }

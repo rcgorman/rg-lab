@@ -26,3 +26,26 @@ Service deployment should be VM-by-VM:
 A workstation can recreate and configure any single VM directly from this
 repository. See [`RECOVERY.md`](RECOVERY.md) for the recovery kit and exact
 rebuild sequence.
+
+## Image Updates
+
+GitHub Actions builds on bootc changes, manual dispatch, and every Monday at
+06:23 UTC. Each uncached build pulls the base image and runs `dnf upgrade` inside
+the build, then applies the configured hardening. This does not update or reboot
+running VMs. Use `ansible/playbooks/bootc_upgrade.yml` for a deliberate rollout.
+
+Images receive `latest`, `sha-<commit>`, and unique `build-<run-id>-<attempt>` tags.
+Scheduled rebuilds can change `latest` and the commit tag without a Git change;
+record the image digest or unique build tag used for a recovery QCOW2. Ensure a
+VM tracks the intended update tag with `sudo bootc status` before an upgrade.
+
+The CIS remediation report is published as a build artifact and retained inside
+the image at `/usr/share/rg-lab/cis-server-l1.html`. Scanner failures fail the
+build; remaining compliance findings are reported. This is not certification
+that every CIS control passes on a running host.
+
+SELinux remains enforcing. The lockdown service no longer orders itself before
+`sysinit.target` or makes `/etc/selinux/config` immutable. An existing host may
+still retain the old immutable flag; inspect with `sudo lsattr /etc/selinux/config`
+and remove it with `sudo chattr -i /etc/selinux/config` if present. This does not
+disable SELinux.

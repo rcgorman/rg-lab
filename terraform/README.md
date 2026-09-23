@@ -22,11 +22,11 @@ Application containers should not be defined here. They belong in Ansible roles 
 4. Use OpenTofu to create workload VMs from that image.
 5. Run Ansible from the administrator workstation to enroll NetBird and deploy Podman quadlets.
 
-The imported image can live on `local`, while created VM disks can live on a different datastore such as `data`. The VM module imports the image with the provider's `import_from` disk attribute:
+The imported image can live on `local`, while created VM disks can live on another datastore. `main.tf` defines the VMs directly using the provider's `import_from` disk attribute:
 
 ```hcl
 image_id     = "local:import/rg-lab-alma10_2-bootc.qcow2"
-datastore_id = "data"
+datastore_id = "storage"
 ```
 
 ## Network Ownership
@@ -37,7 +37,7 @@ contains no platform-specific datasource or per-host network profile. Ansible
 does not create or modify NetworkManager connections.
 
 Every VM has a stable, unique MAC address in `tofu.tfvars`. Keep those MACs when
-recreating a VM. The module validates duplicate IP and MAC values before apply.
+recreating a VM. Validation rejects duplicate VM IDs, IPs, and MACs before apply.
 
 The provider does not wait for QEMU guest-agent to report an address because the
 address is already declared in OpenTofu and agent reporting can lag during first
@@ -66,7 +66,7 @@ Check it with:
 pvesm list local --content import
 ```
 
-OpenTofu creates the `ansible` automation account through Proxmox cloud-init:
+The bootc image creates the `ansible` account; Proxmox cloud-init supplies its keys:
 
 ```hcl
 ssh_public_keys = [
@@ -74,8 +74,38 @@ ssh_public_keys = [
 ]
 ```
 
-Human admin users are managed by Ansible so existing VMs can be updated without
-replacing them.
+The image also creates a locked `ryan` account. Ansible sets its password hash
+and SSH key so existing VMs can be updated without replacing them.
+
+## Existing State
+
+The former single-use VM module has been folded into `main.tf`. Its `moved`
+blocks preserve the existing `identity` and `data` instances. Keep these blocks
+so an older state backup can still be used. This refactor should not recreate VMs.
+Before applying, back up state outside Git and inspect `tofu plan`. Expect moves
+from `module.vm["identity"].proxmox_virtual_environment_vm.this` to
+`proxmox_virtual_environment_vm.vm["identity"]`, and the equivalent for `data`.
+Stop if the plan unexpectedly destroys or replaces a VM or disk. Do not import
+the same VMs again or delete them manually for this refactor.
+
+Local validation (OpenTofu 1.11 used for the mock-provider tests):
+
+```bash
+tofu fmt -check -recursive
+tofu validate
+tofu test
+```
+
+`tofu test` uses a mock provider and does not contact Proxmox or alter live state.
+
+## API TLS
+
+Certificate verification is the default. The current direct endpoint
+`https://10.6.13.10:8006/` still needs the explicit `proxmox_insecure = true`
+exception in your local variables because it uses a self-signed certificate.
+HAProxy's trusted frontend certificate does not apply to this direct connection.
+Install/trust an appropriate Proxmox certificate, or verify that the API works
+through the trusted HAProxy endpoint, before changing this exception to `false`.
 
 
 ## Proxmox API Token
@@ -162,6 +192,6 @@ ssh -i ~/.ssh/id_ed25519_terraform root@10.6.13.10
 
 ## Notes
 
-The VM module follows the same broad pattern as the inspiration repo: `q35`, `ovmf`, an EFI disk, a boot disk created from the imported bootc image, static cloud-init networking, and an `ansible` user with SSH keys.
+The VM resource uses `q35`, `ovmf`, an EFI disk, a boot disk created from the imported bootc image, and static cloud-init networking.
 
 Cloud-init package upgrades are disabled in OpenTofu because bootc hosts should update with `bootc upgrade`, not `dnf upgrade` during first boot.

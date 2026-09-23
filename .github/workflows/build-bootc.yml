@@ -3,6 +3,8 @@ name: Build bootc image
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '23 6 * * 1'
   push:
     branches:
       - main
@@ -23,7 +25,7 @@ env:
   BUILD_CONTEXT: bootc
   DEST_REGISTRY_HOST: ghcr.io
   DEST_IMAGE: ${{ github.repository_owner }}/rg-lab/alma10-bootc
-  TAGLIST: latest sha-${{ github.sha }}
+  TAGLIST: latest sha-${{ github.sha }} build-${{ github.run_id }}-${{ github.run_attempt }}
   REGISTRY_AUTH_FILE: /tmp/containers-auth.json
 
 jobs:
@@ -61,6 +63,7 @@ jobs:
 
       - name: Build bootc image
         run: |
+          set -euo pipefail
           image_ref="${DEST_REGISTRY_HOST}/${DEST_IMAGE}"
           tag_args=()
           for tag in ${TAGLIST}; do
@@ -72,14 +75,32 @@ jobs:
             --cap-add=all \
             --device=/dev/fuse \
             --arch=amd64 \
+            --no-cache \
             --pull=newer \
             --root /mnt/containers-storage \
             "${tag_args[@]}" \
             --file "${CONTAINERFILE}" \
             "${BUILD_CONTEXT}"
 
+      - name: Extract CIS report
+        run: |
+          set -euo pipefail
+          container=$(sudo podman --root /mnt/containers-storage create "${DEST_REGISTRY_HOST}/${DEST_IMAGE}:build-${{ github.run_id }}-${{ github.run_attempt }}")
+          trap 'sudo podman --root /mnt/containers-storage rm "$container"' EXIT
+          sudo podman --root /mnt/containers-storage cp "$container:/usr/share/rg-lab/cis-server-l1.html" ./cis-server-l1.html
+          sudo chown "$(id -u):$(id -g)" cis-server-l1.html
+
+      - name: Upload CIS report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cis-server-l1
+          path: cis-server-l1.html
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Push image tags
         run: |
+          set -euo pipefail
           image_ref="${DEST_REGISTRY_HOST}/${DEST_IMAGE}"
           for tag in ${TAGLIST}; do
             sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman --root /mnt/containers-storage push "${image_ref}:${tag}"

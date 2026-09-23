@@ -1,5 +1,7 @@
 proxmox_endpoint  = "https://10.6.13.10:8006/"
 proxmox_api_token = "terraform@pam!opentofu=replace-me"
+# Temporary exception for the direct API's self-signed certificate.
+# A trusted HAProxy frontend certificate does not secure this port-8006 endpoint.
 proxmox_insecure  = true
 
 node_name                    = "rg-pve01"
