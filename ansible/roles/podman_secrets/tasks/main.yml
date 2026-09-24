@@ -7,13 +7,13 @@
   loop: "{{ podman_secrets_values | dict2items }}"
   no_log: true
 
-- name: Inspect Podman secrets
+- name: Check whether Podman secrets exist
   ansible.builtin.command:
-    cmd: "podman secret inspect {{ item.key }}"
+    argv: [podman, secret, exists, "{{ item.key }}"]
   register: podman_secrets_inspect
   changed_when: false
   check_mode: false
-  failed_when: false
+  failed_when: podman_secrets_inspect.rc not in [0, 1]
   loop: "{{ podman_secrets_values | dict2items }}"
   no_log: true
 

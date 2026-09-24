@@ -3,6 +3,8 @@
   hosts: localhost
   connection: local
   gather_facts: false
+  vars_files:
+    - ../inventory/group_vars/all/container_versions.yml
   vars:
     apps: [vaultwarden, immich, opencloud]
     podman_secrets_create:
@@ -24,7 +26,7 @@
           - not deployment.podman_quadlet_restart_required | bool
           - deployment.podman_quadlet_units | length == expected_counts[item]
           - deployment.podman_quadlet_units | map(attribute='name') | unique | length == deployment.podman_quadlet_units | length
-          - deployment.podman_quadlet_units | selectattr('content', 'undefined') | list | length == 0
+          - deployment.podman_quadlet_units | selectattr('content', 'defined') | list | length == 0
       vars:
         app_tasks: "{{ lookup('template', '../roles/' ~ item ~ '/tasks/main.yml') | from_yaml }}"
         deployment: "{{ app_tasks[-1].vars }}"
@@ -44,7 +46,8 @@
         app_tasks: "{{ lookup('template', '../roles/' ~ item ~ '/tasks/main.yml') | from_yaml }}"
         units: "{{ app_tasks[-1].vars.podman_quadlet_units }}"
         unit_names: "{{ units | map(attribute='name') | list }}"
-        content: "{{ units | map(attribute='content') | join('\n') }}"
+        template_paths: "{{ unit_names | map('regex_replace', '^(.*)$', '../roles/' ~ item ~ '/templates/\\1.j2') | list }}"
+        content: "{{ query('template', *template_paths) | join('\n') }}"
         volume_references: "{{ content | regex_findall('(?m)^Volume=([^:]+\\.volume):') }}"
         network_references: "{{ content | regex_findall('(?m)^Network=(.+\\.network)$') }}"
         containers: "{{ units | selectattr('name', 'search', '\\.container$') | list }}"
@@ -71,7 +74,6 @@
       vars:
         item:
           name: example.container
-          content: ""
         podman_quadlet_units:
           - name: example.network
           - name: example-data.volume
@@ -79,3 +81,12 @@
         podman_quadlet_render:
           changed: false
         podman_quadlet_restart_required: false
+
+    - name: Check application images use explicit version tags
+      ansible.builtin.assert:
+        that:
+          - item.value is match('^.+:[^:@]+$')
+          - item.value is not search(':(latest|rolling|v?[0-9]+)$')
+      loop: "{{ container_images | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"

@@ -19,7 +19,8 @@
       register: bootc_upgrade
       changed_when: "'No changes' not in bootc_upgrade.stdout"
 
-    - name: Reboot into new deployment
+    # Reboot now, before verifying connectivity and advancing to the next host.
+    - name: Reboot into new deployment # noqa: no-handler
       ansible.builtin.reboot:
       when: bootc_upgrade.changed
 

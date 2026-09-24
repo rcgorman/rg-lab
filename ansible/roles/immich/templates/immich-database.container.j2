@@ -1,0 +1,24 @@
+[Unit]
+Description=Immich Postgres
+
+[Container]
+ContainerName=immich_postgres
+Image={{ container_images.immich_postgres }}
+UserNS=auto
+Network=immich.network
+NetworkAlias=immich-database
+Environment=POSTGRES_PASSWORD_FILE=/run/secrets/immich_db_password
+Environment=POSTGRES_USER=postgres
+Environment=POSTGRES_DB=immich
+Environment=POSTGRES_INITDB_ARGS=--data-checksums
+Volume=immich-postgres.volume:/var/lib/postgresql/data:idmap
+ShmSize=128m
+Secret=immich_db_password,target=/run/secrets/immich_db_password
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

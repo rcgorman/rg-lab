@@ -13,14 +13,15 @@
       --setup-key {{ netbird_setup_key }}
       --management-url https://netbird.gormantech.com
   when: "'NetBird IP:' not in netbird_status.stdout"
+  changed_when: true
   no_log: true
 
 - name: Check final NetBird status
   ansible.builtin.command:
     cmd: netbird status
-  register: final_status
+  register: netbird_final_status
   changed_when: false
 
 - name: Show NetBird IP
   ansible.builtin.debug:
-    msg: "{{ final_status.stdout_lines | select('match', '^NetBird IP:') | list }}"
+    msg: "{{ netbird_final_status.stdout_lines | select('match', '^NetBird IP:') | list }}"

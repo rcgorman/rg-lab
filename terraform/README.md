@@ -74,8 +74,9 @@ ssh_public_keys = [
 ]
 ```
 
-The image also creates a locked `ryan` account. Ansible sets its password hash
-and SSH key so existing VMs can be updated without replacing them.
+Ansible creates the `ryan` account and sets its password hash and SSH key. Human
+identities are not baked into the image or managed through Terraform, so existing
+VMs can be updated without replacing them.
 
 ## Existing State
 

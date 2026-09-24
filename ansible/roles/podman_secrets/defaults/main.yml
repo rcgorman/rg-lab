@@ -1,3 +1,4 @@
 ---
 podman_secrets_values: {}
+# Explicit operator action: bootstrap passwords may also need application-side rotation.
 podman_secrets_recreate: false

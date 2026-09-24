@@ -1,0 +1,29 @@
+[Unit]
+Description=Immich Machine Learning
+
+[Container]
+ContainerName=immich_machine_learning
+Image={{ container_images.immich_machine_learning }}
+UserNS=auto
+Pull=newer
+Network=immich.network
+NetworkAlias=immich-machine-learning
+Environment=TZ=America/New_York
+Environment=UPLOAD_LOCATION=./library
+Environment=DB_DATA_LOCATION=./postgres
+Environment=IMMICH_VERSION={{ immich_version }}
+Environment=DB_HOSTNAME=immich-database
+Environment=DB_USERNAME=postgres
+Environment=DB_PASSWORD_FILE=/run/secrets/immich_db_password
+Environment=DB_DATABASE_NAME=immich
+Environment=REDIS_HOSTNAME=immich-redis
+Volume=immich-model-cache.volume:/cache:idmap
+Secret=immich_db_password,target=/run/secrets/immich_db_password
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

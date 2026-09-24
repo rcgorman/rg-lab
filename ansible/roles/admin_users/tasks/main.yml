@@ -19,10 +19,20 @@
 - name: Enforce Ryan account policy
   ansible.builtin.user:
     name: ryan
+    comment: Ryan Gorman (Ansible-managed)
     groups:
       - wheel
     append: false
     shell: /bin/bash
+    create_home: true
+
+- name: Restrict Ryan home directory permissions
+  ansible.builtin.file:
+    path: /home/ryan
+    state: directory
+    owner: ryan
+    group: ryan
+    mode: "0700"
 
 - name: Configure Ryan password
   ansible.builtin.user:

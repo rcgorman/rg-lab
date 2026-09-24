@@ -1,0 +1,18 @@
+[Unit]
+Description=Immich Redis
+
+[Container]
+ContainerName=immich_redis
+Image={{ container_images.valkey }}
+UserNS=auto
+Network=immich.network
+NetworkAlias=immich-redis
+HealthCmd=redis-cli ping || exit 1
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

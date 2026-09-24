@@ -34,9 +34,11 @@ sops exec-env ansible/secrets.sops.yml \
 
 The bootc image owns baseline services and host settings such as chronyd,
 firewalld, qemu-guest-agent, SELinux hardening, and bootc-specific cloud-init
-defaults. It also owns baseline users and `containers` subuid/subgid mappings.
-The `ansible` account is created with passwordless sudo, but SSH keys and human
-password hashes are still injected outside the image. Mutable host configuration
+defaults. It also owns the `ansible` bootstrap account and `containers`
+subuid/subgid mappings. The `ansible` account has passwordless sudo; cloud-init
+supplies its SSH key. Ansible creates `ryan` and manages his SSH key, home
+permissions, password hash, and wheel membership for password-required sudo.
+Mutable host configuration
 such as firewall zone services is handled by Ansible.
 
 Proxmox cloud-init exclusively owns host networking. Do not add NetworkManager
@@ -67,10 +69,11 @@ NAS-backed app data is mounted with Podman named NFS volumes instead of host `/m
 
 ## Service Definitions
 
-Each service playbook calls one application role. Its `tasks/main.yml` contains
-the secret environment-variable names and literal Quadlet text together. The
-OpenCloud role also contains OnlyOffice; its larger CSP and application registry
-remain separate native YAML files. No application appends to a shared host fact.
+Each service playbook calls one application role. Its `tasks/main.yml` lists the
+secrets, configuration tasks, and units to deploy. Native Quadlet definitions
+live in that role's `templates/*.container.j2`, `*.network.j2`, and `*.volume.j2`
+files. The OpenCloud role also contains OnlyOffice, its CSP, and its application
+registry. No application appends to a shared host fact.
 
 The small `podman_secrets` and `podman_quadlet` helpers handle secret creation,
 copying units, daemon reload, and container startup. `Network=app.network` and
@@ -82,10 +85,15 @@ file does not change an existing volume's driver/options. Inspect and plan any
 storage migration separately; never delete a volume to make a playbook pass.
 Do not run `restorecon` over active `:Z` bind mounts: Podman manages their labels.
 
-Vaultwarden and both Immich images are pinned to the deployed registry digests.
-OpenCloud and OnlyOffice retain their explicit release tags. Container auto-update
-labels are omitted: review image changes in Git and redeploy deliberately. Update
-Immich server and machine-learning together to the same release.
+All application image references are centralized in
+`inventory/group_vars/all/container_versions.yml` and use explicit version tags,
+not digests, `latest`, or major-only tags. Immich server and machine-learning
+share `immich_version`. The Postgres image retains its vendor's composite
+Postgres/VectorChord/pgvectors version tag. Tags can be republished by upstream;
+they are easier to read but do not provide digest-level immutability.
+Container auto-update labels remain omitted: review changes in Git and redeploy
+deliberately. These variables load with the repository inventory; an alternate
+inventory must also supply this file or equivalent `container_images` values.
 
 Run the local definition checks from the repository root:
 
@@ -95,6 +103,58 @@ ansible-playbook ansible/tests/quadlets.yml
 ```
 
 These checks do not start containers or validate Linux/SELinux/NFS behavior.
+
+## Human Account Provisioning
+
+New bootc images create only `ansible`. Until `admin_users.yml` has run with
+`RYAN_SSH_PUBLIC_KEY` and `RYAN_PASSWORD_HASH`, a new VM has no usable Ryan console
+login. Keep the bootstrap SSH key accessible independently of Vaultwarden.
+
+For existing VMs, run this role before upgrading to the image without `ryan`,
+then verify the account after the upgrade using the `ansible` SSH account:
+
+```bash
+sops exec-env ansible/secrets.sops.yml \
+  'ansible-playbook ansible/playbooks/admin_users.yml --private-key "$HOME/.ssh/id_ed25519_terraform"'
+```
+
+The role marks the account as Ansible-managed and retains an existing UID. It
+does not delete or recreate the account or its home directory. Verify Ryan's
+console login and password-required sudo before relying on them for recovery.
+
+## Secret Rotation
+
+Rotation is deliberately an operator action, not an automatic consequence of
+editing SOPS. A normal deployment creates missing Podman secrets and leaves
+existing ones unchanged, without reading their contents back or storing hashes.
+Therefore a SOPS edit alone does **not** rotate an existing Podman secret.
+
+For a runtime secret such as Vaultwarden's admin token:
+
+1. Edit the encrypted file with `sops ansible/secrets.sops.yml`.
+2. Run the relevant service playbook with explicit replacement enabled.
+3. Verify the new credential works and the old credential no longer does.
+
+```bash
+sops exec-env ansible/secrets.sops.yml \
+  'ansible-playbook ansible/playbooks/vaultwarden.yml --limit rg-identity01 -e podman_secrets_recreate=true'
+```
+
+This flag replaces **all** Podman secrets defined by that service playbook and
+restarts its containers. Use the individual service playbook, not `site.yml`,
+for rotation. Normal deployments should omit the flag.
+
+| Value | Existing-installation behavior |
+| --- | --- |
+| `VAULTWARDEN_ADMIN_TOKEN` | Replace the Podman secret and restart Vaultwarden. |
+| `ONLYOFFICE_JWT_SECRET` | Coordinate with any JWT clients, then replace and restart the OpenCloud/OnlyOffice stack. |
+| `IMMICH_DB_PASSWORD` | During maintenance, change the actual Postgres account password and match it in SOPS; then replace the secret and redeploy. |
+| `OPENCLOUD_ADMIN_PASSWORD` | Bootstrap value only. Change/reset the existing account through OpenCloud, not just its Podman secret. |
+| `RYAN_PASSWORD_HASH`, `RYAN_SSH_PUBLIC_KEY` | Rerun `admin_users.yml`; these are not Podman secrets. |
+| `NETBIRD_SETUP_KEY` | Used for enrollment, not to rotate the identity of an already enrolled host. |
+
+Never delete a database or application volume to rotate a password. Check mode
+does not perform rotation, and CI never decrypts the SOPS file.
 
 ## OpenCloud And OnlyOffice
 

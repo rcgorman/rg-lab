@@ -85,7 +85,8 @@ jobs:
       - name: Extract CIS report
         run: |
           set -euo pipefail
-          container=$(sudo podman --root /mnt/containers-storage create "${DEST_REGISTRY_HOST}/${DEST_IMAGE}:build-${{ github.run_id }}-${{ github.run_attempt }}")
+          image_ref="${DEST_REGISTRY_HOST}/${DEST_IMAGE}:build-${{ github.run_id }}-${{ github.run_attempt }}"
+          container=$(sudo podman --root /mnt/containers-storage create "$image_ref")
           trap 'sudo podman --root /mnt/containers-storage rm "$container"' EXIT
           sudo podman --root /mnt/containers-storage cp "$container:/usr/share/rg-lab/cis-server-l1.html" ./cis-server-l1.html
           sudo chown "$(id -u):$(id -g)" cis-server-l1.html

@@ -1,0 +1,24 @@
+---
+extends: default
+ignore: |
+  .git/
+  .ansible/
+  .cache/
+  terraform/.terraform/
+  ansible/secrets.sops.yml
+rules:
+  line-length:
+    max: 160
+    allow-non-breakable-inline-mappings: true
+  truthy:
+    allowed-values: ['true', 'false']
+    check-keys: false
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: false
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1

@@ -2,17 +2,19 @@
 - name: Read firewalld services
   ansible.builtin.command:
     cmd: "firewall-cmd --permanent --zone={{ firewall_baseline_zone }} --list-services"
-  register: firewall_services
+  register: firewall_baseline_current_services
   changed_when: false
 
 - name: Remove unmanaged firewalld services
   ansible.builtin.command:
     cmd: "firewall-cmd --permanent --zone={{ firewall_baseline_zone }} --remove-service={{ item }}"
-  loop: "{{ firewall_services.stdout.split() | difference(firewall_baseline_services) }}"
+  loop: "{{ firewall_baseline_current_services.stdout.split() | difference(firewall_baseline_services) }}"
+  changed_when: true
   notify: Reload firewalld
 
 - name: Add managed firewalld services
   ansible.builtin.command:
     cmd: "firewall-cmd --permanent --zone={{ firewall_baseline_zone }} --add-service={{ item }}"
-  loop: "{{ firewall_baseline_services | difference(firewall_services.stdout.split()) }}"
+  loop: "{{ firewall_baseline_services | difference(firewall_baseline_current_services.stdout.split()) }}"
+  changed_when: true
   notify: Reload firewalld

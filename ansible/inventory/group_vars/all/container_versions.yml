@@ -1,0 +1,12 @@
+---
+# Both Immich components must use the same release.
+immich_version: v3.2.2
+
+container_images:
+  vaultwarden: docker.io/vaultwarden/server:1.37.3
+  immich_server: "ghcr.io/immich-app/immich-server:{{ immich_version }}"
+  immich_machine_learning: "ghcr.io/immich-app/immich-machine-learning:{{ immich_version }}"
+  immich_postgres: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+  valkey: docker.io/valkey/valkey:9.1.0
+  opencloud: docker.io/opencloudeu/opencloud:7.2.4
+  onlyoffice: docker.io/onlyoffice/documentserver:9.3.1

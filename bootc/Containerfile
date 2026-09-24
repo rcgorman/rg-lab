@@ -30,13 +30,11 @@ RUN printf '%s\n' \
         'resize_rootfs: false' \
         > /etc/cloud/cloud.cfg.d/99-bootc-disable-growpart.cfg
 
-# Baseline users and Podman subuid/subgid mappings
+# Bootstrap automation account and Podman subuid/subgid mappings
 RUN set -eu; \
     useradd --create-home --groups wheel --shell /bin/bash --comment "Ansible automation user" ansible ; \
-    useradd --create-home --groups wheel --shell /bin/bash --comment "Ryan Gorman" ryan ; \
     passwd --lock ansible ; \
-    passwd --lock ryan ; \
-    chmod 0700 /home/ansible /home/ryan ; \
+    chmod 0700 /home/ansible ; \
     install -d -m 0750 /etc/sudoers.d ; \
     printf 'ansible ALL=(ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/ansible ; \
     chmod 0440 /etc/sudoers.d/ansible ; \

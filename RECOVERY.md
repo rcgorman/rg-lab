@@ -74,6 +74,11 @@ ip route
 
 The active host profile should be `cloud-init eth0`.
 
+The new image only provisions the `ansible` bootstrap account. Ryan's console
+password and SSH access become available after `admin_users.yml` (also included
+in `site.yml`) runs with the SOPS values. Do not assume Ryan console login works
+on a freshly created VM before that step.
+
 ## Prepare SOPS And Ansible
 
 Install `sops` and `age` on the administrator workstation. On macOS:

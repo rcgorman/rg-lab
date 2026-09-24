@@ -27,6 +27,31 @@ A workstation can recreate and configure any single VM directly from this
 repository. See [`RECOVERY.md`](RECOVERY.md) for the recovery kit and exact
 rebuild sequence.
 
+Application version tags live in
+[`container_versions.yml`](ansible/inventory/group_vars/all/container_versions.yml).
+Each application role keeps its Quadlets in native-format `templates/` files.
+The image provides the `ansible` bootstrap account; Ansible owns human accounts.
+
+## Validation
+
+The `Validate configuration` GitHub Actions workflow runs on pull requests,
+pushes to `main`, and manual dispatch. It checks YAML and Ansible lint, playbook
+syntax, Quadlet templates, OpenTofu formatting/validation, and mock-provider tests.
+It needs no SOPS key, Proxmox credentials, or host SSH keys, and never deploys.
+Backups and published-port policy are separate work, not changed by validation.
+
+To run the same checks locally with the tools installed:
+
+```bash
+yamllint --strict .
+ansible-lint --offline ansible/playbooks ansible/roles ansible/tests
+ansible-playbook ansible/playbooks/site.yml --syntax-check
+ansible-playbook ansible/tests/quadlets.yml
+tofu -chdir=terraform fmt -check -recursive
+tofu -chdir=terraform validate
+tofu -chdir=terraform test
+```
+
 ## Image Updates
 
 GitHub Actions builds on bootc changes, manual dispatch, and every Monday at

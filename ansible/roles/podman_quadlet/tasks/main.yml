@@ -8,8 +8,8 @@
     mode: "0755"
 
 - name: Render quadlet units
-  ansible.builtin.copy:
-    content: "{{ item.content }}"
+  ansible.builtin.template:
+    src: "{{ item.name }}.j2"
     dest: "/etc/containers/systemd/{{ item.name }}"
     owner: root
     group: root

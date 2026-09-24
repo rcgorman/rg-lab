@@ -1,0 +1,30 @@
+[Unit]
+Description=Immich Server
+
+[Container]
+ContainerName=immich_server
+Image={{ container_images.immich_server }}
+User=3000:3000
+Pull=newer
+Network=immich.network
+PublishPort=2283:2283
+NetworkAlias=immich-server
+Environment=TZ=America/New_York
+Environment=UPLOAD_LOCATION=./library
+Environment=DB_DATA_LOCATION=./postgres
+Environment=IMMICH_VERSION={{ immich_version }}
+Environment=DB_HOSTNAME=immich-database
+Environment=DB_USERNAME=postgres
+Environment=DB_PASSWORD_FILE=/run/secrets/immich_db_password
+Environment=DB_DATABASE_NAME=immich
+Environment=REDIS_HOSTNAME=immich-redis
+Volume=immich-library.volume:/data
+Secret=immich_db_password,target=/run/secrets/immich_db_password
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target
