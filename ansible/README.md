@@ -154,7 +154,7 @@ for rotation. Normal deployments should omit the flag.
 | `NETBIRD_SETUP_KEY` | Used for enrollment, not to rotate the identity of an already enrolled host. |
 
 Never delete a database or application volume to rotate a password. Check mode
-does not perform rotation, and CI never decrypts the SOPS file.
+does not perform rotation.
 
 ## OpenCloud And OnlyOffice
 

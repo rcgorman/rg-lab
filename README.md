@@ -32,15 +32,9 @@ Application version tags live in
 Each application role keeps its Quadlets in native-format `templates/` files.
 The image provides the `ansible` bootstrap account; Ansible owns human accounts.
 
-## Validation
+## Local Checks
 
-The `Validate configuration` GitHub Actions workflow runs on pull requests,
-pushes to `main`, and manual dispatch. It checks YAML and Ansible lint, playbook
-syntax, Quadlet templates, OpenTofu formatting/validation, and mock-provider tests.
-It needs no SOPS key, Proxmox credentials, or host SSH keys, and never deploys.
-Backups and published-port policy are separate work, not changed by validation.
-
-To run the same checks locally with the tools installed:
+Run these checks locally with the tools installed:
 
 ```bash
 yamllint --strict .
