@@ -5,7 +5,74 @@
   vars:
     podman_secrets_values:
       opencloud_admin_password: "{{ lookup('env', 'OPENCLOUD_ADMIN_PASSWORD') }}"
-      onlyoffice_jwt_secret: "{{ lookup('env', 'ONLYOFFICE_JWT_SECRET') }}"
+
+- name: Check legacy OnlyOffice service state
+  ansible.builtin.command:
+    argv: [systemctl, is-active, onlyoffice.service]
+  register: opencloud_onlyoffice_service
+  changed_when: false
+  failed_when: opencloud_onlyoffice_service.rc not in [0, 3, 4]
+
+- name: Stop legacy OnlyOffice service
+  ansible.builtin.systemd:
+    name: onlyoffice.service
+    state: stopped
+  when: opencloud_onlyoffice_service.rc == 0
+
+- name: Check for legacy OnlyOffice container
+  ansible.builtin.command:
+    argv: [podman, container, exists, onlyoffice]
+  register: opencloud_onlyoffice_container
+  changed_when: false
+  failed_when: opencloud_onlyoffice_container.rc not in [0, 1]
+
+- name: Remove legacy OnlyOffice container
+  ansible.builtin.command:
+    argv: [podman, rm, --force, onlyoffice]
+  when: opencloud_onlyoffice_container.rc == 0
+  changed_when: true
+
+- name: Check for legacy OnlyOffice backup timer
+  ansible.builtin.stat:
+    path: /etc/systemd/system/rg-backup-onlyoffice.timer
+  register: opencloud_onlyoffice_backup_timer
+
+- name: Disable legacy OnlyOffice backup timer
+  ansible.builtin.systemd:
+    name: rg-backup-onlyoffice.timer
+    enabled: false
+    state: stopped
+  when: opencloud_onlyoffice_backup_timer.stat.exists
+
+- name: Remove legacy OnlyOffice integration files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/containers/systemd/onlyoffice.container
+    - /etc/containers/systemd/onlyoffice-data.volume
+    - /etc/containers/systemd/onlyoffice-lib.volume
+    - /etc/containers/systemd/onlyoffice-postgres.volume
+    - /etc/containers/systemd/onlyoffice-rabbitmq.volume
+    - /etc/systemd/system/rg-backup-onlyoffice.service
+    - /etc/systemd/system/rg-backup-onlyoffice.timer
+    - /usr/local/libexec/rg-backup-onlyoffice
+    - /srv/quadlet/opencloud/app-registry.yaml
+    - /srv/quadlet/opencloud/csp.yaml
+  register: opencloud_legacy_files
+
+- name: Check for legacy OnlyOffice secret
+  ansible.builtin.command:
+    argv: [podman, secret, exists, onlyoffice_jwt_secret]
+  register: opencloud_onlyoffice_secret
+  changed_when: false
+  failed_when: opencloud_onlyoffice_secret.rc not in [0, 1]
+
+- name: Remove legacy OnlyOffice secret
+  ansible.builtin.command:
+    argv: [podman, secret, rm, onlyoffice_jwt_secret]
+  when: opencloud_onlyoffice_secret.rc == 0
+  changed_when: true
 
 - name: Ensure OpenCloud config directories exist
   ansible.builtin.file:
@@ -16,25 +83,6 @@
     mode: "0755"
   loop:
     - /srv/quadlet/opencloud
-    - /srv/quadlet/opencloud/apps
-
-- name: Install OpenCloud content security policy
-  ansible.builtin.template:
-    src: csp.yaml.j2
-    dest: /srv/quadlet/opencloud/csp.yaml
-    owner: "3001"
-    group: "3001"
-    mode: "0644"
-  register: opencloud_csp
-
-- name: Install OpenCloud application registry
-  ansible.builtin.template:
-    src: app-registry.yaml.j2
-    dest: /srv/quadlet/opencloud/app-registry.yaml
-    owner: "3001"
-    group: "3001"
-    mode: "0644"
-  register: opencloud_app_registry
 
 - name: Ensure OpenCloud config ownership
   ansible.builtin.file:
@@ -50,14 +98,9 @@
     name: podman_quadlet
   vars:
     podman_quadlet_restart_required: >-
-      {{ podman_secrets_create.changed or opencloud_csp.changed
-         or opencloud_app_registry.changed or opencloud_config_ownership.changed }}
+      {{ podman_secrets_create.changed or opencloud_legacy_files.changed
+         or opencloud_config_ownership.changed }}
     podman_quadlet_units:
       - name: opencloud.network
       - name: opencloud-data.volume
-      - name: onlyoffice-data.volume
-      - name: onlyoffice-lib.volume
-      - name: onlyoffice-postgres.volume
-      - name: onlyoffice-rabbitmq.volume
-      - name: onlyoffice.container
       - name: opencloud.container

@@ -5,8 +5,6 @@ proxmox_api_token = "terraform@pam!opentofu=replace-me"
 proxmox_insecure  = true
 
 node_name                    = "rg-pve01"
-proxmox_ssh_username         = "root"
-proxmox_ssh_private_key_path = "~/.ssh/id_ed25519_terraform"
 image_id                     = "local:import/rg-lab-alma10_2-bootc.qcow2"
 datastore_id                 = "storage"
 
@@ -18,8 +16,8 @@ vms = {
   identity = {
     vm_id        = 202
     name         = "rg-identity01"
-    cpu_cores    = 4
-    memory_mb    = 8192
+    cpu_cores    = 2
+    memory_mb    = 4096
     disk_size_gb = 80
     bridge       = "vmbr0"
     mac_address  = "02:52:00:00:02:02"

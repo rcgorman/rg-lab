@@ -1,0 +1,26 @@
+---
+- name: Collect service state
+  ansible.builtin.service_facts:
+
+- name: Require application services to be running
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.services[item] is defined
+      - ansible_facts.services[item].state | default('missing') == 'running'
+    fail_msg: "{{ item }} is not running"
+  loop: "{{ service_smoke_test_services }}"
+
+- name: Probe application health endpoints
+  ansible.builtin.uri:
+    url: "{{ item.url }}"
+    method: GET
+    status_code: 200
+    return_content: false
+    timeout: 10
+  register: service_smoke_test_probe
+  until: service_smoke_test_probe.status | default(0) == 200
+  retries: "{{ service_smoke_test_retries }}"
+  delay: "{{ service_smoke_test_delay }}"
+  loop: "{{ service_smoke_test_endpoints }}"
+  loop_control:
+    label: "{{ item.name }}"

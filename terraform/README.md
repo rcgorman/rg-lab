@@ -99,6 +99,15 @@ tofu test
 
 `tofu test` uses a mock provider and does not contact Proxmox or alter live state.
 
+## VM Sizing
+
+`rg-identity01` is sized at 2 vCPU and 4 GiB because its primary workload is
+Vaultwarden. Its existing 80 GiB disk is intentionally unchanged: Proxmox/QEMU
+disk growth is straightforward, but shrinking an existing guest disk is not a
+safe in-place OpenTofu operation. `rg-data01` remains at 4 vCPU and 8 GiB until
+host metrics demonstrate memory pressure; increase it to 12 GiB only when the
+workload justifies it.
+
 ## API TLS
 
 Certificate verification is the default. The current direct endpoint
@@ -150,23 +159,29 @@ Expected provider:
 registry.opentofu.org/bpg/proxmox
 ```
 
-## Proxmox Permission Check
+## Proxmox Permissions
 
-The provider uses both the Proxmox API and SSH:
+This configuration uses only API-backed VM resources and imports the already
+uploaded disk with `import_from`. The provider therefore has no SSH block and
+does not need permanent root SSH access to Proxmox.
 
-- API token: `proxmox_api_token`
-- SSH user/key: `proxmox_ssh_username` and `proxmox_ssh_private_key_path`
-
-For the first successful apply, keep it simple:
+Use a dedicated, privilege-separated API token. A starting role for this VM-only
+configuration is:
 
 ```text
-API user/token: terraform@pam!opentofu
-Permission path: /
-Role: Administrator
-Propagate: yes
-Privilege separation: disabled, or token ACL explicitly granted
-SSH user: root
+Datastore.AllocateSpace Datastore.Audit
+SDN.Audit SDN.Use
+VM.Allocate VM.Audit VM.Clone VM.PowerMgmt
+VM.Config.CDROM VM.Config.Cloudinit VM.Config.CPU VM.Config.Disk
+VM.Config.HWType VM.Config.Memory VM.Config.Network VM.Config.Options
 ```
+
+Grant datastore privileges only on the import and VM-disk datastores, SDN
+privileges only where `vmbr0` is visible, and VM privileges on a dedicated pool
+containing the managed VM IDs. Proxmox permission inheritance and provider
+behavior vary by version, so first run `tofu plan` with the reduced token. Add a
+missing privilege only when a specific API error demonstrates it is required;
+do not fall back to `Administrator` or disable token privilege separation.
 
 In the Proxmox UI, check:
 
@@ -175,7 +190,8 @@ Datacenter -> Permissions
 Datacenter -> Permissions -> API Tokens
 ```
 
-If privilege separation is enabled for the token, the token itself needs permissions, not just the parent user.
+The token itself needs these permissions when privilege separation is enabled,
+not just its parent user.
 
 You can test the API token from your workstation:
 
@@ -183,12 +199,6 @@ You can test the API token from your workstation:
 curl -k \
   -H 'Authorization: PVEAPIToken=terraform@pam!opentofu=TOKEN_SECRET' \
   https://10.6.13.10:8006/api2/json/version
-```
-
-You can test SSH separately:
-
-```bash
-ssh -i ~/.ssh/id_ed25519_terraform root@10.6.13.10
 ```
 
 ## Notes

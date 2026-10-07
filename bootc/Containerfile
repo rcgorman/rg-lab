@@ -66,6 +66,7 @@ RUN set -eu; \
     oscap xccdf eval --remediate \
         --profile xccdf_org.ssgproject.content_profile_cis_server_l1 \
         --report /usr/share/rg-lab/cis-server-l1.html \
+        --results /usr/share/rg-lab/cis-server-l1-results.xml \
         /usr/share/xml/scap/ssg/content/ssg-almalinux10-ds.xml || scan_status=$?; \
     case "$scan_status" in \
         0) ;; \

@@ -2,13 +2,12 @@
 mock_provider "proxmox" {}
 
 variables {
-  proxmox_endpoint             = "https://pve.invalid:8006/"
-  proxmox_api_token            = "test@pve!test=not-a-real-token"
-  proxmox_ssh_private_key_path = "tofu.tfvars.example"
-  node_name                    = "rg-pve01"
-  image_id                     = "local:import/test.qcow2"
-  datastore_id                 = "storage"
-  ssh_public_keys              = ["ssh-ed25519 test-only"]
+  proxmox_endpoint  = "https://pve.invalid:8006/"
+  proxmox_api_token = "test@pve!test=not-a-real-token"
+  node_name         = "rg-pve01"
+  image_id          = "local:import/test.qcow2"
+  datastore_id      = "storage"
+  ssh_public_keys   = ["ssh-ed25519 test-only"]
   vms = {
     identity = {
       vm_id        = 202

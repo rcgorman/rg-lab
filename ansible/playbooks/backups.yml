@@ -15,9 +15,7 @@
   roles:
     - role: application_backup
       vars:
-        application_backup_jobs: >-
-          {{ ['immich', 'opencloud']
-             + (['onlyoffice']
-                if application_backup_onlyoffice_enabled | default(false) | bool
-                else []) }}
+        application_backup_jobs:
+          - immich
+          - opencloud
     - role: restic_client

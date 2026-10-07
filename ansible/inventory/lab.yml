@@ -16,5 +16,3 @@ all:
     data_hosts:
       hosts:
         rg-data01:
-    apps_hosts:
-      hosts: {}

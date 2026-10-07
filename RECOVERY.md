@@ -8,7 +8,7 @@ not depend on the Vaultwarden instance being recovered.
 
 Keep these items outside the workload VMs:
 
-- The Terraform API token and Proxmox SSH private key.
+- The Terraform API token.
 - `terraform/tofu.tfvars` and the latest OpenTofu state backup.
 - The SSH private key matching `ssh_public_keys` in `tofu.tfvars`.
 - The age private key in an independently accessible, encrypted recovery kit.
@@ -26,9 +26,6 @@ The required local volume backups are:
 - `vaultwarden-data`.
 - A consistent Immich Postgres backup, preferably its native database dump,
   matched with the corresponding NAS library data and recorded image versions.
-- `onlyoffice-data`, `onlyoffice-lib`, `onlyoffice-postgres`, and
-  `onlyoffice-rabbitmq` if preserving the complete document-server installation.
-
 Immich library data and OpenCloud application data are already stored on the
 NAS, but their database or configuration still needs to be recoverable.
 An Immich photo directory alone does not restore accounts, albums, or its asset

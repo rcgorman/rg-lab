@@ -20,18 +20,6 @@ variable "node_name" {
   type        = string
 }
 
-variable "proxmox_ssh_username" {
-  description = "SSH user for provider-side Proxmox operations."
-  type        = string
-  default     = "root"
-}
-
-variable "proxmox_ssh_private_key_path" {
-  description = "Private key path for provider-side Proxmox SSH operations."
-  type        = string
-  default     = "~/.ssh/id_ed25519_terraform"
-}
-
 variable "image_id" {
   description = "Proxmox import file ID for the bootc qcow2 image, for example local:import/rg-lab-alma10_2-bootc.qcow2."
   type        = string

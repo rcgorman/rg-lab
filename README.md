@@ -28,6 +28,12 @@ A workstation can recreate and configure any single VM directly from this
 repository. See [`RECOVERY.md`](RECOVERY.md) for the recovery kit and exact
 rebuild sequence.
 
+Infrastructure configured outside Git is recorded in
+[`docs/network.md`](docs/network.md), [`docs/storage.md`](docs/storage.md), and
+[`docs/backup.md`](docs/backup.md). Lightweight alerting is specified in
+[`docs/monitoring.md`](docs/monitoring.md). Reviewed hardening findings are tracked in
+[`docs/CIS-EXCEPTIONS.md`](docs/CIS-EXCEPTIONS.md).
+
 Application version tags live in
 [`container_versions.yml`](ansible/inventory/group_vars/all/container_versions.yml).
 Each application role keeps its Quadlets in native-format `templates/` files.
@@ -39,9 +45,10 @@ Run these checks locally with the tools installed:
 
 ```bash
 yamllint --strict .
-ansible-lint --offline ansible/playbooks ansible/roles ansible/tests
+ansible-lint --offline ansible/playbooks ansible/roles
 ansible-playbook ansible/playbooks/site.yml --syntax-check
-ansible-playbook ansible/tests/quadlets.yml
+ansible-playbook ansible/playbooks/backups.yml --syntax-check
+ansible-playbook ansible/playbooks/smoke_tests.yml --syntax-check
 tofu -chdir=terraform fmt -check -recursive
 tofu -chdir=terraform validate
 tofu -chdir=terraform test

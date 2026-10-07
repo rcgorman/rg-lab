@@ -9,4 +9,3 @@ container_images:
   immich_postgres: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
   valkey: docker.io/valkey/valkey:9.1.0
   opencloud: docker.io/opencloudeu/opencloud:7.2.4
-  onlyoffice: docker.io/onlyoffice/documentserver:9.3.1

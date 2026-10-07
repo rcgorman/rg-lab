@@ -6,9 +6,8 @@ the bootc image; Ansible handles enrollment and application deployment.
 ## Inventory Groups
 
 - `bootc_hosts`: every bootc VM that should get NetBird enrollment and bootc updates.
-- `identity_hosts`: identity and credential services such as Vaultwarden and Keycloak.
+- `identity_hosts`: identity and credential services such as Vaultwarden.
 - `data_hosts`: higher-value data apps such as Immich, OpenCloud, and document management.
-- `apps_hosts`: lower-criticality apps and experiments.
 
 ## Playbooks
 
@@ -18,7 +17,7 @@ the bootc image; Ansible handles enrollment and application deployment.
 - `playbooks/admin_users.yml`: configure human admin users.
 - `playbooks/vaultwarden.yml`: deploy Vaultwarden only.
 - `playbooks/immich.yml`: deploy Immich only.
-- `playbooks/opencloud.yml`: deploy OpenCloud with OnlyOffice document editing.
+- `playbooks/opencloud.yml`: deploy OpenCloud file sync and storage.
 - `playbooks/backups.yml`: explicitly configure recovery artifacts and the Restic client after its repository is ready.
 - `playbooks/site.yml`: run the current full site configuration.
 
@@ -83,9 +82,6 @@ have succeeded. Local artifacts are retained for seven days:
   also be protected with a corresponding TrueNAS snapshot or backup.
 - OpenCloud copies `/srv/quadlet/opencloud`. Its NAS-backed application data must
   also be protected on TrueNAS.
-- OnlyOffice cold volume exports are available but disabled by default because
-  they stop both OnlyOffice and OpenCloud. Set
-  `application_backup_onlyoffice_enabled=true` if that state must be retained.
 
 Inspect the timers and run a backup manually with:
 
@@ -100,10 +96,11 @@ TrueNAS-resident data.
 
 ## Restic Client
 
-The bootc image installs a checksum-verified Restic binary. The `restic_client`
-role is present on both workload VMs but remains disabled until a repository is
-available. It backs up `/var/backups/rg-lab`; retention and pruning deliberately
-remain server-side so the future REST clients can use append-only credentials.
+The bootc image installs a checksum-verified Restic binary. The backup playbook
+targets both workload VMs, but the `restic_client` role remains disabled until a
+repository is available. It backs up `/var/backups/rg-lab`; retention and pruning
+deliberately remain server-side so the future REST clients can use append-only
+credentials.
 
 For each host, add these SOPS keys, using the inventory hostname converted to
 upper case with punctuation replaced by underscores:
@@ -142,8 +139,7 @@ server-side prune credentials.
 Each service playbook calls one application role. Its `tasks/main.yml` lists the
 secrets, configuration tasks, and units to deploy. Native Quadlet definitions
 live in that role's `templates/*.container.j2`, `*.network.j2`, and `*.volume.j2`
-files. The OpenCloud role also contains OnlyOffice, its CSP, and its application
-registry. No application appends to a shared host fact.
+files. No application appends to a shared host fact.
 
 The small `podman_secrets` and `podman_quadlet` helpers handle secret creation,
 copying units, daemon reload, and container startup. `Network=app.network` and
@@ -169,7 +165,8 @@ Run the local definition checks from the repository root:
 
 ```bash
 ansible-playbook ansible/playbooks/site.yml --syntax-check
-ansible-playbook ansible/tests/quadlets.yml
+ansible-playbook ansible/playbooks/backups.yml --syntax-check
+ansible-playbook ansible/playbooks/smoke_tests.yml --syntax-check
 ```
 
 These checks do not start containers or validate Linux/SELinux/NFS behavior.
@@ -217,7 +214,6 @@ for rotation. Normal deployments should omit the flag.
 | Value | Existing-installation behavior |
 | --- | --- |
 | `VAULTWARDEN_ADMIN_TOKEN` | Replace the Podman secret and restart Vaultwarden. |
-| `ONLYOFFICE_JWT_SECRET` | Coordinate with any JWT clients, then replace and restart the OpenCloud/OnlyOffice stack. |
 | `IMMICH_DB_PASSWORD` | During maintenance, change the actual Postgres account password and match it in SOPS; then replace the secret and redeploy. |
 | `OPENCLOUD_ADMIN_PASSWORD` | Bootstrap value only. Change/reset the existing account through OpenCloud, not just its Podman secret. |
 | `RYAN_PASSWORD_HASH`, `RYAN_SSH_PUBLIC_KEY` | Rerun `admin_users.yml`; these are not Podman secrets. |
@@ -226,32 +222,25 @@ for rotation. Normal deployments should omit the flag.
 Never delete a database or application volume to rotate a password. Check mode
 does not perform rotation.
 
-## OpenCloud And OnlyOffice
+## OpenCloud
 
-The full OpenCloud stack uses the stable `opencloudeu/opencloud:7.2.4` image and
-the pinned `onlyoffice/documentserver:9.3.1` image. OpenCloud data remains on the
-TrueNAS-backed `opencloud-data` volume. OnlyOffice's application, library,
-Postgres, and RabbitMQ state use local named volumes on `rg-data01`.
-
-The generated `ONLYOFFICE_JWT_SECRET` is stored in `secrets.sops.yml`. Deploy the
-complete stack with:
+OpenCloud uses the pinned `opencloudeu/opencloud:7.2.4` image, with application
+data on the TrueNAS-backed `opencloud-data` volume. It provides file sync and
+storage without an embedded office suite. Deploy it with:
 
 ```bash
 sops exec-env ansible/secrets.sops.yml \
   'ansible-playbook ansible/playbooks/opencloud.yml --private-key "$HOME/.ssh/id_ed25519_terraform"'
 ```
 
-The reverse proxy needs these routes:
+The reverse proxy needs this route:
 
 - `cloud.internal.gormantech.com` to `http://10.6.13.22:9200`
-- `office.internal.gormantech.com` to `http://10.6.13.22:18081`
 
-HAProxy terminates TLS for both services. The OnlyOffice backend must use plain
-HTTP rather than SSL. The HTTPS frontend must also send these headers so
-OnlyOffice advertises secure WOPI endpoints:
-
-```haproxy
-http-request set-header X-Forwarded-Proto https
-http-request set-header X-Forwarded-Host %[req.hdr(host)]
-http-request set-header X-Forwarded-Port 443
-```
+The first OpenCloud deployment after this change stops the legacy OnlyOffice
+service and removes its Quadlet units, application registry, CSP override, and
+Podman secret. It deliberately preserves the four `onlyoffice-*` Podman volumes
+and `/srv/quadlet/opencloud/apps` so the old state is not destroyed implicitly.
+After OpenCloud has been verified and any needed data retained, remove those
+volumes manually and delete the obsolete `office.internal.gormantech.com` DNS
+and HAProxy configuration.

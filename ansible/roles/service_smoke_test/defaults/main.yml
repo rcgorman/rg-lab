@@ -1,0 +1,5 @@
+---
+service_smoke_test_services: []
+service_smoke_test_endpoints: []
+service_smoke_test_retries: 10
+service_smoke_test_delay: 3

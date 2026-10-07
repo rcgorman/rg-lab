@@ -1,5 +1,5 @@
 ---
-- name: Deploy OpenCloud with OnlyOffice
+- name: Deploy OpenCloud
   hosts: data_hosts
   become: true
   roles:

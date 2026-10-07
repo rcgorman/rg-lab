@@ -119,13 +119,19 @@ jobs:
           container=$(sudo podman --root /mnt/containers-storage create "$image_ref")
           trap 'sudo podman --root /mnt/containers-storage rm "$container"' EXIT
           sudo podman --root /mnt/containers-storage cp "$container:/usr/share/rg-lab/cis-server-l1.html" ./cis-server-l1.html
-          sudo chown "$(id -u):$(id -g)" cis-server-l1.html
+          sudo podman --root /mnt/containers-storage cp "$container:/usr/share/rg-lab/cis-server-l1-results.xml" ./cis-server-l1-results.xml
+          sudo chown "$(id -u):$(id -g)" cis-server-l1.html cis-server-l1-results.xml
+
+      - name: Check CIS findings against reviewed baseline
+        run: python3 bootc/scripts/check-cis-report.py cis-server-l1.html bootc/cis-expected-findings.txt
 
       - name: Upload CIS report
         uses: actions/upload-artifact@v4
         with:
           name: cis-server-l1
-          path: cis-server-l1.html
+          path: |
+            cis-server-l1.html
+            cis-server-l1-results.xml
           if-no-files-found: error
           retention-days: 30
 

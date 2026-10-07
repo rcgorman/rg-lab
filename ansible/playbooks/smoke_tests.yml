@@ -1,0 +1,29 @@
+---
+- name: Verify identity services
+  hosts: identity_hosts
+  become: true
+  gather_facts: false
+  roles:
+    - role: service_smoke_test
+      vars:
+        service_smoke_test_services:
+          - vaultwarden.service
+        service_smoke_test_endpoints:
+          - name: Vaultwarden health
+            url: http://127.0.0.1:18080/alive
+
+- name: Verify data services
+  hosts: data_hosts
+  become: true
+  gather_facts: false
+  roles:
+    - role: service_smoke_test
+      vars:
+        service_smoke_test_services:
+          - immich-server.service
+          - opencloud.service
+        service_smoke_test_endpoints:
+          - name: Immich API ping
+            url: http://127.0.0.1:2283/api/server/ping
+          - name: OpenCloud health
+            url: http://127.0.0.1:9200/healthz
