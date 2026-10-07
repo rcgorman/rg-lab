@@ -31,11 +31,11 @@ env:
 jobs:
   build:
     name: Build and push bootc image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Maximize build space
         run: |
@@ -54,12 +54,42 @@ jobs:
           df -h
 
       - name: Log in to GHCR
-        uses: redhat-actions/podman-login@v1
-        with:
-          registry: ${{ env.DEST_REGISTRY_HOST }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-          auth_file_path: ${{ env.REGISTRY_AUTH_FILE }}
+        env:
+          REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          printf '%s' "${REGISTRY_PASSWORD}" | podman login \
+            --username "${{ github.actor }}" \
+            --password-stdin \
+            --authfile "${REGISTRY_AUTH_FILE}" \
+            "${DEST_REGISTRY_HOST}"
+
+      - name: Pull bootc base image
+        run: |
+          set -euo pipefail
+          base_image=$(awk '$1 == "FROM" { print $2; exit }' "${CONTAINERFILE}")
+          if [[ -z "${base_image}" ]]; then
+            echo "::error::Could not determine the base image from ${CONTAINERFILE}"
+            exit 1
+          fi
+
+          for attempt in 1 2 3 4 5; do
+            if sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" \
+              podman --root /mnt/containers-storage pull \
+                --arch=amd64 \
+                "${base_image}"; then
+              exit 0
+            fi
+
+            if [[ "${attempt}" -eq 5 ]]; then
+              echo "::error::Failed to pull ${base_image} after ${attempt} attempts"
+              exit 1
+            fi
+
+            retry_delay=$((attempt * 15))
+            echo "::warning::Base image pull attempt ${attempt} failed; retrying in ${retry_delay} seconds"
+            sleep "${retry_delay}"
+          done
 
       - name: Build bootc image
         run: |
@@ -76,7 +106,7 @@ jobs:
             --device=/dev/fuse \
             --arch=amd64 \
             --no-cache \
-            --pull=newer \
+            --pull=never \
             --root /mnt/containers-storage \
             "${tag_args[@]}" \
             --file "${CONTAINERFILE}" \
@@ -106,3 +136,7 @@ jobs:
           for tag in ${TAGLIST}; do
             sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman --root /mnt/containers-storage push "${image_ref}:${tag}"
           done
+
+      - name: Log out of GHCR
+        if: always()
+        run: podman logout --authfile "${REGISTRY_AUTH_FILE}" "${DEST_REGISTRY_HOST}" || true
