@@ -1,0 +1,13 @@
+[Unit]
+Description=Upload rg-lab recovery backups to Restic
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/rg-restic-backup
+UMask=0077
+CacheDirectory=restic
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

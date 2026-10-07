@@ -36,8 +36,10 @@ index. Stop the relevant stack before a raw volume backup; copying a live
 database directory is not a consistent database backup. The machine-learning
 cache is rebuildable and does not need a recovery backup.
 
-The NAS is the initial backup destination, not yet an independent copy of data
-already stored there. Backup automation and a test restore are still required.
+The backup roles are prepared but deliberately excluded from `site.yml`, and
+their timers default to disabled until the TrueNAS Restic repository is ready.
+Do not treat the repository as recoverable until application artifacts, Restic
+snapshots, and an actual restore have all been tested.
 
 ## Build The Image
 

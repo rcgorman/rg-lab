@@ -1,0 +1,16 @@
+---
+application_backup_jobs: []
+application_backup_root: /var/backups/rg-lab
+application_backup_retention_days: 7
+application_backup_timers_enabled: false
+application_backup_onlyoffice_enabled: false
+application_backup_supported_jobs:
+  - vaultwarden
+  - immich
+  - opencloud
+  - onlyoffice
+application_backup_schedules:
+  vaultwarden: "*-*-* 02:10:00"
+  immich: "*-*-* 02:25:00"
+  opencloud: "*-*-* 02:40:00"
+  onlyoffice: "Sun *-*-* 03:00:00"

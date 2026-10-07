@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+set -Eeuo pipefail
+umask 077
+
+backup_paths=(
+{% for path in restic_client_backup_paths %}
+  {{ path | quote }}
+{% endfor %}
+)
+
+for path in "${backup_paths[@]}"; do
+  if [[ ! -e "${path}" ]]; then
+    echo "Restic backup source does not exist: ${path}" >&2
+    exit 1
+  fi
+done
+
+exec /usr/local/libexec/rg-restic backup \
+  --host {{ restic_client_host | quote }} \
+{% for tag in restic_client_tags %}
+  --tag {{ tag | quote }} \
+{% endfor %}
+  "${backup_paths[@]}"

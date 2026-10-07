@@ -19,6 +19,7 @@ the bootc image; Ansible handles enrollment and application deployment.
 - `playbooks/vaultwarden.yml`: deploy Vaultwarden only.
 - `playbooks/immich.yml`: deploy Immich only.
 - `playbooks/opencloud.yml`: deploy OpenCloud with OnlyOffice document editing.
+- `playbooks/backups.yml`: explicitly configure recovery artifacts and the Restic client after its repository is ready.
 - `playbooks/site.yml`: run the current full site configuration.
 
 Run `playbooks/host_config.yml` once on a new bootc VM before deploying app
@@ -66,6 +67,75 @@ cloud-init-provisioned SSH key, and has passwordless sudo for automation. The
 `admin_users` role manages only the `ansible` and `ryan` accounts; it does not
 remove unrelated users.
 NAS-backed app data is mounted with Podman named NFS volumes instead of host `/mnt/...` bind mounts.
+
+## Application Backups
+
+`playbooks/backups.yml` is intentionally excluded from `site.yml`. When run, it
+installs root-owned systemd services and timers that create recovery artifacts
+under `/var/backups/rg-lab`. Both the application and Restic timers are disabled
+by default until the Restic repository is ready and a manual backup and restore
+have succeeded. Local artifacts are retained for seven days:
+
+- Vaultwarden runs its native SQLite backup, briefly stops the service while
+  copying attachments, Sends, configuration, and signing keys, and then verifies
+  that the service restarted.
+- Immich creates a compressed logical Postgres dump. Its NAS-backed library must
+  also be protected with a corresponding TrueNAS snapshot or backup.
+- OpenCloud copies `/srv/quadlet/opencloud`. Its NAS-backed application data must
+  also be protected on TrueNAS.
+- OnlyOffice cold volume exports are available but disabled by default because
+  they stop both OnlyOffice and OpenCloud. Set
+  `application_backup_onlyoffice_enabled=true` if that state must be retained.
+
+Inspect the timers and run a backup manually with:
+
+```bash
+systemctl list-timers 'rg-backup-*'
+sudo systemctl start rg-backup-vaultwarden.service
+journalctl -u rg-backup-vaultwarden.service
+```
+
+Do not treat the Immich or OpenCloud artifacts as complete without their
+TrueNAS-resident data.
+
+## Restic Client
+
+The bootc image installs a checksum-verified Restic binary. The `restic_client`
+role is present on both workload VMs but remains disabled until a repository is
+available. It backs up `/var/backups/rg-lab`; retention and pruning deliberately
+remain server-side so the future REST clients can use append-only credentials.
+
+For each host, add these SOPS keys, using the inventory hostname converted to
+upper case with punctuation replaced by underscores:
+
+```text
+RESTIC_REPOSITORY_RG_IDENTITY01
+RESTIC_PASSWORD_RG_IDENTITY01
+RESTIC_REST_USERNAME_RG_IDENTITY01
+RESTIC_REST_PASSWORD_RG_IDENTITY01
+
+RESTIC_REPOSITORY_RG_DATA01
+RESTIC_PASSWORD_RG_DATA01
+RESTIC_REST_USERNAME_RG_DATA01
+RESTIC_REST_PASSWORD_RG_DATA01
+```
+
+After initializing the repositories on the backup server, enable the role and
+deploy it without enabling the timer yet:
+
+```bash
+sops exec-env ansible/secrets.sops.yml \
+  'ansible-playbook ansible/playbooks/backups.yml -e restic_client_enabled=true'
+sudo /usr/local/libexec/rg-restic snapshots
+sudo systemctl start rg-restic-backup.service
+```
+
+After verifying the application artifacts, the first Restic snapshots, and a
+restore, enable scheduled operation with
+`application_backup_timers_enabled=true`, `restic_client_enabled=true`, and
+`restic_client_timer_enabled=true` in inventory. Restic repository passwords
+must also remain in the independent recovery kit; the workload VMs must not hold
+server-side prune credentials.
 
 ## Service Definitions
 

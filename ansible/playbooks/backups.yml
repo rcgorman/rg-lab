@@ -1,0 +1,23 @@
+---
+- name: Configure identity application backups
+  hosts: identity_hosts
+  become: true
+  roles:
+    - role: application_backup
+      vars:
+        application_backup_jobs:
+          - vaultwarden
+    - role: restic_client
+
+- name: Configure data application backups
+  hosts: data_hosts
+  become: true
+  roles:
+    - role: application_backup
+      vars:
+        application_backup_jobs: >-
+          {{ ['immich', 'opencloud']
+             + (['onlyoffice']
+                if application_backup_onlyoffice_enabled | default(false) | bool
+                else []) }}
+    - role: restic_client

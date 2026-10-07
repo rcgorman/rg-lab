@@ -1,0 +1,20 @@
+#!/usr/bin/bash
+set -Eeuo pipefail
+umask 077
+
+read_secret() {
+  local value
+  IFS= read -r value < "$1"
+  printf '%s' "${value}"
+}
+
+export RESTIC_REPOSITORY
+RESTIC_REPOSITORY=$(read_secret /etc/restic/repository)
+export RESTIC_PASSWORD_FILE=/etc/restic/repository-password
+export RESTIC_REST_USERNAME
+RESTIC_REST_USERNAME=$(read_secret /etc/restic/rest-username)
+export RESTIC_REST_PASSWORD
+RESTIC_REST_PASSWORD=$(read_secret /etc/restic/rest-password)
+export RESTIC_CACHE_DIR=/var/cache/restic
+
+exec {{ restic_client_binary | quote }} "$@"

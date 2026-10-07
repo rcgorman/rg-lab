@@ -1,0 +1,77 @@
+---
+- name: Validate application backup configuration
+  ansible.builtin.assert:
+    that:
+      - application_backup_jobs | difference(application_backup_supported_jobs) | length == 0
+      - application_backup_root | length > 1
+      - application_backup_root != '/'
+      - application_backup_retention_days | int > 0
+      - application_backup_jobs | difference(application_backup_schedules.keys() | list) | length == 0
+    fail_msg: Invalid application backup configuration
+
+- name: Ensure application backup directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "{{ application_backup_root }}"
+    - /usr/local/libexec
+
+- name: Install application backup scripts
+  ansible.builtin.template:
+    src: "{{ item }}.sh.j2"
+    dest: "/usr/local/libexec/rg-backup-{{ item }}"
+    owner: root
+    group: root
+    mode: "0700"
+  loop: "{{ application_backup_jobs }}"
+  notify: Reload systemd for application backups
+
+- name: Install application backup services
+  ansible.builtin.template:
+    src: application-backup.service.j2
+    dest: "/etc/systemd/system/rg-backup-{{ item }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ application_backup_jobs }}"
+  notify: Reload systemd for application backups
+
+- name: Install application backup timers
+  ansible.builtin.template:
+    src: application-backup.timer.j2
+    dest: "/etc/systemd/system/rg-backup-{{ item }}.timer"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ application_backup_jobs }}"
+  notify: Reload systemd for application backups
+
+- name: Apply application backup unit changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Reconcile application backup timers
+  ansible.builtin.systemd:
+    name: "rg-backup-{{ item }}.timer"
+    enabled: "{{ application_backup_timers_enabled | bool }}"
+    state: "{{ 'started' if application_backup_timers_enabled | bool else 'stopped' }}"
+  loop: "{{ application_backup_jobs }}"
+
+- name: Check for inactive application backup timers
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/rg-backup-{{ item }}.timer"
+  loop: "{{ application_backup_supported_jobs | difference(application_backup_jobs) }}"
+  register: application_backup_inactive_timer_units
+
+- name: Disable inactive application backup timers
+  ansible.builtin.systemd:
+    name: "rg-backup-{{ item.item }}.timer"
+    enabled: false
+    state: stopped
+  loop: "{{ application_backup_inactive_timer_units.results }}"
+  when: item.stat.exists
+  loop_control:
+    label: "{{ item.item }}"

@@ -1,0 +1,12 @@
+[Unit]
+Description=Create {{ item | capitalize }} recovery backup
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/rg-backup-{{ item }}
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

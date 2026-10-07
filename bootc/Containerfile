@@ -1,13 +1,18 @@
 FROM quay.io/almalinuxorg/almalinux-bootc:10.2
 
+ARG RESTIC_VERSION=0.19.1
+ARG RESTIC_LINUX_AMD64_SHA256=f415415624dcc452f2a02b8c33641791a8c6d6d3b65bbb3543fcf9a25151585c
+
 # Netbird Repo
 COPY files/yum.repos.d/netbird.repo /etc/yum.repos.d/netbird.repo
 
 RUN dnf upgrade -y \
     && dnf install -y \
         bash-completion \
+        bzip2 \
         chrony \
         cloud-init \
+        curl \
         firewalld \
         git \
         netbird \
@@ -22,6 +27,17 @@ RUN dnf upgrade -y \
         sudo \
         vim-enhanced \
     && dnf clean all
+
+# Restic is not shipped by the base AlmaLinux repositories. Install the
+# upstream static binary at a pinned version and verify it before extraction.
+RUN curl --fail --location --show-error \
+        --output /tmp/restic.bz2 \
+        "https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_amd64.bz2" \
+    && printf '%s  %s\n' "${RESTIC_LINUX_AMD64_SHA256}" /tmp/restic.bz2 | sha256sum --check --strict \
+    && bzip2 --decompress --stdout /tmp/restic.bz2 > /usr/local/bin/restic \
+    && chmod 0755 /usr/local/bin/restic \
+    && rm /tmp/restic.bz2 \
+    && restic version
 
 # Disable cloud-init root filesystem resizing for bootc/composefs
 RUN printf '%s\n' \

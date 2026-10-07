@@ -1,0 +1,12 @@
+[Unit]
+Description=Schedule Restic recovery backups
+
+[Timer]
+OnCalendar={{ restic_client_on_calendar }}
+Persistent=true
+RandomizedDelaySec={{ restic_client_randomized_delay }}
+AccuracySec=1m
+Unit=rg-restic-backup.service
+
+[Install]
+WantedBy=timers.target

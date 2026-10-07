@@ -1,0 +1,121 @@
+---
+- name: Configure Restic client
+  when: restic_client_enabled | bool
+  block:
+    - name: Validate Restic client configuration
+      ansible.builtin.assert:
+        that:
+          - restic_client_repository | length > 0
+          - restic_client_repository_password | length > 0
+          - restic_client_rest_username | length > 0
+          - restic_client_rest_password | length > 0
+          - restic_client_backup_paths | length > 0
+        fail_msg: >-
+          Restic credentials are missing. Supply the four host-specific
+          RESTIC_*_{{ restic_client_secret_suffix }} environment variables through SOPS.
+      no_log: true
+
+    - name: Check Restic binary installed by bootc image
+      ansible.builtin.stat:
+        path: "{{ restic_client_binary }}"
+      register: restic_client_binary_stat
+
+    - name: Require the Restic binary
+      ansible.builtin.assert:
+        that:
+          - restic_client_binary_stat.stat.exists
+          - restic_client_binary_stat.stat.executable
+        fail_msg: >-
+          {{ restic_client_binary }} is unavailable. Upgrade this host to a
+          bootc image containing Restic before enabling the client role.
+
+    - name: Ensure Restic configuration and helper directories exist
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "{{ item.mode }}"
+      loop:
+        - path: /etc/restic
+          mode: "0700"
+        - path: /usr/local/libexec
+          mode: "0700"
+
+    - name: Install Restic repository settings
+      ansible.builtin.copy:
+        dest: "/etc/restic/{{ item.name }}"
+        content: "{{ item.value }}\n"
+        owner: root
+        group: root
+        mode: "0600"
+      loop:
+        - name: repository
+          value: "{{ restic_client_repository }}"
+        - name: repository-password
+          value: "{{ restic_client_repository_password }}"
+        - name: rest-username
+          value: "{{ restic_client_rest_username }}"
+        - name: rest-password
+          value: "{{ restic_client_rest_password }}"
+      no_log: true
+
+    - name: Install Restic command wrapper
+      ansible.builtin.template:
+        src: rg-restic.j2
+        dest: /usr/local/libexec/rg-restic
+        owner: root
+        group: root
+        mode: "0700"
+      notify: Reload systemd for Restic client
+
+    - name: Install Restic backup wrapper
+      ansible.builtin.template:
+        src: rg-restic-backup.j2
+        dest: /usr/local/libexec/rg-restic-backup
+        owner: root
+        group: root
+        mode: "0700"
+      notify: Reload systemd for Restic client
+
+    - name: Install Restic backup service
+      ansible.builtin.template:
+        src: rg-restic-backup.service.j2
+        dest: /etc/systemd/system/rg-restic-backup.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload systemd for Restic client
+
+    - name: Install Restic backup timer
+      ansible.builtin.template:
+        src: rg-restic-backup.timer.j2
+        dest: /etc/systemd/system/rg-restic-backup.timer
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload systemd for Restic client
+
+    - name: Apply Restic client unit changes
+      ansible.builtin.meta: flush_handlers
+
+    - name: Reconcile Restic backup timer
+      ansible.builtin.systemd:
+        name: rg-restic-backup.timer
+        enabled: "{{ restic_client_timer_enabled | bool }}"
+        state: "{{ 'started' if restic_client_timer_enabled | bool else 'stopped' }}"
+
+- name: Check for a previously installed Restic timer
+  ansible.builtin.stat:
+    path: /etc/systemd/system/rg-restic-backup.timer
+  register: restic_client_existing_timer
+  when: not restic_client_enabled | bool
+
+- name: Disable Restic timer when the client is disabled
+  ansible.builtin.systemd:
+    name: rg-restic-backup.timer
+    enabled: false
+    state: stopped
+  when:
+    - not restic_client_enabled | bool
+    - restic_client_existing_timer.stat.exists

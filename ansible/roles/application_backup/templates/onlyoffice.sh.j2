@@ -1,0 +1,56 @@
+#!/usr/bin/bash
+set -Eeuo pipefail
+umask 077
+
+backup_root={{ application_backup_root | quote }}
+retention_days={{ application_backup_retention_days | int }}
+job_root="${backup_root}/onlyoffice"
+timestamp=$(date --utc +%Y%m%dT%H%M%SZ)
+final_dir="${job_root}/${timestamp}"
+stage_dir=""
+services_stopped=false
+
+cleanup() {
+  local status=$?
+  trap - EXIT
+
+  if [[ "${services_stopped}" == true ]]; then
+    if ! systemctl start onlyoffice.service opencloud.service; then
+      status=1
+    fi
+  fi
+
+  if [[ "${status}" -ne 0 && -n "${stage_dir}" ]]; then
+    rm -rf -- "${stage_dir}"
+  fi
+
+  exit "${status}"
+}
+trap cleanup EXIT
+
+exec 9>/run/lock/rg-backup-onlyoffice.lock
+flock --nonblock 9
+
+install -d -m 0700 "${job_root}"
+stage_dir=$(mktemp --directory "${job_root}/.tmp.${timestamp}.XXXXXX")
+
+systemctl stop opencloud.service onlyoffice.service
+services_stopped=true
+
+for volume in onlyoffice-data onlyoffice-lib onlyoffice-postgres onlyoffice-rabbitmq; do
+  podman volume export --output "${stage_dir}/${volume}.tar" "${volume}"
+done
+
+systemctl start onlyoffice.service opencloud.service
+services_stopped=false
+systemctl is-active --quiet onlyoffice.service opencloud.service
+
+{
+  printf 'created_utc=%s\n' "${timestamp}"
+  printf 'host=%s\n' "$(hostname --short)"
+  podman inspect onlyoffice --format '{% raw %}container={{.Name}} image={{.ImageName}} image_id={{.Image}}{% endraw %}'
+} > "${stage_dir}/manifest.txt"
+
+mv -- "${stage_dir}" "${final_dir}"
+stage_dir=""
+find "${job_root}" -mindepth 1 -maxdepth 1 -type d -mtime "+${retention_days}" -exec rm -rf -- {} +

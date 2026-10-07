@@ -1,0 +1,79 @@
+#!/usr/bin/bash
+set -Eeuo pipefail
+umask 077
+
+backup_root={{ application_backup_root | quote }}
+retention_days={{ application_backup_retention_days | int }}
+job_root="${backup_root}/vaultwarden"
+timestamp=$(date --utc +%Y%m%dT%H%M%SZ)
+final_dir="${job_root}/${timestamp}"
+stage_dir=""
+vaultwarden_stopped=false
+database_snapshot=""
+
+cleanup() {
+  local status=$?
+  trap - EXIT
+
+  if [[ "${vaultwarden_stopped}" == true ]]; then
+    if ! systemctl start vaultwarden.service; then
+      status=1
+    fi
+  fi
+
+  if [[ -n "${database_snapshot}" && -f "${database_snapshot}" ]]; then
+    rm -f -- "${database_snapshot}"
+  fi
+
+  if [[ "${status}" -ne 0 && -n "${stage_dir}" ]]; then
+    rm -rf -- "${stage_dir}"
+  fi
+
+  exit "${status}"
+}
+trap cleanup EXIT
+
+exec 9>/run/lock/rg-backup-vaultwarden.lock
+flock --nonblock 9
+
+install -d -m 0700 "${job_root}"
+stage_dir=$(mktemp --directory "${job_root}/.tmp.${timestamp}.XXXXXX")
+volume_path=$(podman volume inspect vaultwarden-data --format '{% raw %}{{.Mountpoint}}{% endraw %}')
+
+backup_started=$(date +%s)
+podman exec vaultwarden /vaultwarden backup
+database_snapshot=$(find "${volume_path}" -maxdepth 1 -type f -name 'db_*.sqlite3' -printf '%T@ %p\n' \
+  | sort --numeric-sort --reverse \
+  | sed --quiet '1s/^[^ ]* //p')
+test -n "${database_snapshot}"
+test "$(stat --format=%Y "${database_snapshot}")" -ge "${backup_started}"
+
+systemctl stop vaultwarden.service
+vaultwarden_stopped=true
+
+install -d -m 0700 "${stage_dir}/data"
+rsync --archive \
+  --exclude='/db.sqlite3' \
+  --exclude='/db.sqlite3-shm' \
+  --exclude='/db.sqlite3-wal' \
+  --exclude='/db_*.sqlite3' \
+  --exclude='/icon_cache/' \
+  --exclude='/tmp/' \
+  "${volume_path}/" "${stage_dir}/data/"
+install -m 0600 "${database_snapshot}" "${stage_dir}/data/db.sqlite3"
+
+rm -f -- "${database_snapshot}"
+database_snapshot=""
+systemctl start vaultwarden.service
+vaultwarden_stopped=false
+systemctl is-active --quiet vaultwarden.service
+
+{
+  printf 'created_utc=%s\n' "${timestamp}"
+  printf 'host=%s\n' "$(hostname --short)"
+  podman inspect vaultwarden --format '{% raw %}container={{.Name}} image={{.ImageName}} image_id={{.Image}}{% endraw %}'
+} > "${stage_dir}/manifest.txt"
+
+mv -- "${stage_dir}" "${final_dir}"
+stage_dir=""
+find "${job_root}" -mindepth 1 -maxdepth 1 -type d -mtime "+${retention_days}" -exec rm -rf -- {} +

@@ -1,0 +1,12 @@
+[Unit]
+Description=Schedule {{ item | capitalize }} recovery backups
+
+[Timer]
+OnCalendar={{ application_backup_schedules[item] }}
+Persistent=true
+RandomizedDelaySec=15m
+AccuracySec=1m
+Unit=rg-backup-{{ item }}.service
+
+[Install]
+WantedBy=timers.target

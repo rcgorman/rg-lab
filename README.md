@@ -22,6 +22,7 @@ Service deployment should be VM-by-VM:
 2. SOPS decrypts the required secrets only for the local Ansible process.
 3. Ansible configures the host, enrolls NetBird, and calls one role per service.
 4. Service roles render Podman quadlets into `/etc/containers/systemd/` and any needed config files in `/srv/quadlet/servicename/`.
+5. After the TrueNAS Restic repository is ready, its standalone playbook enables application-aware backups and Restic uploads.
 
 A workstation can recreate and configure any single VM directly from this
 repository. See [`RECOVERY.md`](RECOVERY.md) for the recovery kit and exact

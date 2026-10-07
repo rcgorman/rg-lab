@@ -1,0 +1,21 @@
+---
+restic_client_enabled: false
+restic_client_timer_enabled: false
+restic_client_binary: /usr/local/bin/restic
+restic_client_secret_suffix: "{{ inventory_hostname | upper | regex_replace('[^A-Z0-9]', '_') }}"
+restic_client_repository: >-
+  {{ lookup('env', 'RESTIC_REPOSITORY_' ~ restic_client_secret_suffix) }}
+restic_client_repository_password: >-
+  {{ lookup('env', 'RESTIC_PASSWORD_' ~ restic_client_secret_suffix) }}
+restic_client_rest_username: >-
+  {{ lookup('env', 'RESTIC_REST_USERNAME_' ~ restic_client_secret_suffix) }}
+restic_client_rest_password: >-
+  {{ lookup('env', 'RESTIC_REST_PASSWORD_' ~ restic_client_secret_suffix) }}
+restic_client_backup_paths:
+  - /var/backups/rg-lab
+restic_client_on_calendar: "*-*-* 04:00:00"
+restic_client_randomized_delay: 20m
+restic_client_host: "{{ inventory_hostname }}"
+restic_client_tags:
+  - rg-lab
+  - automated

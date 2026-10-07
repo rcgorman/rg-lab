@@ -1,0 +1,40 @@
+#!/usr/bin/bash
+set -Eeuo pipefail
+umask 077
+
+backup_root={{ application_backup_root | quote }}
+retention_days={{ application_backup_retention_days | int }}
+job_root="${backup_root}/opencloud"
+timestamp=$(date --utc +%Y%m%dT%H%M%SZ)
+final_dir="${job_root}/${timestamp}"
+stage_dir=""
+
+cleanup() {
+  local status=$?
+  trap - EXIT
+  if [[ "${status}" -ne 0 && -n "${stage_dir}" ]]; then
+    rm -rf -- "${stage_dir}"
+  fi
+  exit "${status}"
+}
+trap cleanup EXIT
+
+exec 9>/run/lock/rg-backup-opencloud.lock
+flock --nonblock 9
+
+install -d -m 0700 "${job_root}"
+stage_dir=$(mktemp --directory "${job_root}/.tmp.${timestamp}.XXXXXX")
+install -d -m 0700 "${stage_dir}/config"
+rsync --archive --delete /srv/quadlet/opencloud/ "${stage_dir}/config/"
+
+{
+  printf 'created_utc=%s\n' "${timestamp}"
+  printf 'host=%s\n' "$(hostname --short)"
+  podman volume inspect opencloud-data \
+    --format '{% raw %}volume={{.Name}} device={{index .Options "device"}}{% endraw %}'
+  podman inspect opencloud --format '{% raw %}container={{.Name}} image={{.ImageName}} image_id={{.Image}}{% endraw %}'
+} > "${stage_dir}/manifest.txt"
+
+mv -- "${stage_dir}" "${final_dir}"
+stage_dir=""
+find "${job_root}" -mindepth 1 -maxdepth 1 -type d -mtime "+${retention_days}" -exec rm -rf -- {} +
