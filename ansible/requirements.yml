@@ -1,0 +1,12 @@
+---
+collections:
+  - name: ansible.posix
+    version: 2.2.0
+  - name: community.general
+    version: 12.6.1
+  - name: community.library_inventory_filtering_v1
+    version: 1.1.5
+  - name: containers.podman
+    version: 1.20.1
+  - name: fedora.linux_system_roles
+    version: 2.5.0

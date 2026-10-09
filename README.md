@@ -37,13 +37,15 @@ Infrastructure configured outside Git is recorded in
 Application version tags live in
 [`container_versions.yml`](ansible/inventory/group_vars/all/container_versions.yml).
 Each application role keeps its Quadlets in native-format `templates/` files.
-The image provides the `ansible` bootstrap account; Ansible owns human accounts.
+The pinned Linux System Roles Podman collection deploys those definitions. The
+image provides the `ansible` bootstrap account; Ansible owns human accounts.
 
 ## Local Checks
 
 Run these checks locally with the tools installed:
 
 ```bash
+ansible-galaxy collection install --requirements-file ansible/requirements.yml
 yamllint --strict .
 ansible-lint --offline ansible/playbooks ansible/roles
 ansible-playbook ansible/playbooks/site.yml --syntax-check

@@ -80,10 +80,16 @@ on a freshly created VM before that step.
 
 ## Prepare SOPS And Ansible
 
-Install `sops` and `age` on the administrator workstation. On macOS:
+Install Ansible, `sops`, and `age` on the administrator workstation. On macOS:
 
 ```bash
-brew install age sops
+brew install age ansible sops
+```
+
+Install the repository's pinned Ansible collection dependencies:
+
+```bash
+ansible-galaxy collection install --requirements-file ansible/requirements.yml
 ```
 
 Restore the age key from the independent recovery kit to

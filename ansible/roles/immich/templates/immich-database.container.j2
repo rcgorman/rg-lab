@@ -4,6 +4,7 @@ Description=Immich Postgres
 [Container]
 ContainerName=immich_postgres
 Image={{ container_images.immich_postgres }}
+Pull=missing
 UserNS=auto
 Network=immich.network
 NetworkAlias=immich-database

@@ -1,22 +1,69 @@
 ---
-- name: Create immich secrets
-  ansible.builtin.include_role:
-    name: podman_secrets
-  vars:
-    podman_secrets_values:
-      immich_db_password: "{{ lookup('env', 'IMMICH_DB_PASSWORD') }}"
+- name: Validate Immich secret configuration
+  ansible.builtin.assert:
+    that:
+      - lookup('env', 'IMMICH_DB_PASSWORD') | length > 0
+    fail_msg: Missing value for Podman secret immich_db_password
+  no_log: true
 
-- name: Deploy immich Quadlets
+- name: Deploy Immich with the Podman system role
   ansible.builtin.include_role:
-    name: podman_quadlet
+    name: fedora.linux_system_roles.podman
   vars:
-    podman_quadlet_restart_required: "{{ podman_secrets_create.changed }}"
-    podman_quadlet_units:
-      - name: immich.network
-      - name: immich-library.volume
-      - name: immich-model-cache.volume
-      - name: immich-postgres.volume
-      - name: immich-redis.container
-      - name: immich-database.container
-      - name: immich-machine-learning.container
-      - name: immich-server.container
+    podman_run_as_user: root
+    # Quadlet Pull= controls image acquisition; do not force-pull mutable tags.
+    podman_pull_image: false
+    podman_secrets:
+      - name: immich_db_password
+        data: "{{ lookup('env', 'IMMICH_DB_PASSWORD') }}"
+        force: "{{ podman_secrets_recreate | default(false) | bool }}"
+        skip_existing: "{{ not (podman_secrets_recreate | default(false) | bool) }}"
+        restarts:
+          - immich-database
+          - immich-machine-learning
+          - immich-server
+    podman_quadlet_specs:
+      - template_src: "{{ playbook_dir }}/../roles/immich/templates/immich.network.j2"
+        restarts:
+          - immich-redis
+          - immich-database
+          - immich-machine-learning
+          - immich-server
+      - template_src: "{{ playbook_dir }}/../roles/immich/templates/immich-library.volume.j2"
+        restarts:
+          - immich-server
+      - template_src: "{{ playbook_dir }}/../roles/immich/templates/immich-model-cache.volume.j2"
+        restarts:
+          - immich-machine-learning
+      - template_src: "{{ playbook_dir }}/../roles/immich/templates/immich-postgres.volume.j2"
+        restarts:
+          - immich-database
+      - template_src: "{{ playbook_dir }}/../roles/immich/templates/immich-redis.container.j2"
+      - template_src: "{{ playbook_dir }}/../roles/immich/templates/immich-database.container.j2"
+      - template_src: "{{ playbook_dir }}/../roles/immich/templates/immich-machine-learning.container.j2"
+      - template_src: "{{ playbook_dir }}/../roles/immich/templates/immich-server.container.j2"
+
+- name: Reload systemd after Immich Quadlet deployment
+  ansible.builtin.systemd:
+    daemon_reload: true
+  changed_when: false
+
+- name: Reset failed Immich service state
+  ansible.builtin.command:
+    argv: [systemctl, reset-failed, "{{ item }}"]
+  changed_when: false
+  loop:
+    - immich-redis.service
+    - immich-database.service
+    - immich-machine-learning.service
+    - immich-server.service
+
+- name: Ensure Immich services are running
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: started
+  loop:
+    - immich-redis.service
+    - immich-database.service
+    - immich-machine-learning.service
+    - immich-server.service

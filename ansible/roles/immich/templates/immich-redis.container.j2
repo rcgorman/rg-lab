@@ -4,6 +4,7 @@ Description=Immich Redis
 [Container]
 ContainerName=immich_redis
 Image={{ container_images.valkey }}
+Pull=missing
 UserNS=auto
 Network=immich.network
 NetworkAlias=immich-redis

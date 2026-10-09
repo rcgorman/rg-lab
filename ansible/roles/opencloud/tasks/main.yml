@@ -1,10 +1,10 @@
 ---
-- name: Create opencloud secrets
-  ansible.builtin.include_role:
-    name: podman_secrets
-  vars:
-    podman_secrets_values:
-      opencloud_admin_password: "{{ lookup('env', 'OPENCLOUD_ADMIN_PASSWORD') }}"
+- name: Validate OpenCloud secret configuration
+  ansible.builtin.assert:
+    that:
+      - lookup('env', 'OPENCLOUD_ADMIN_PASSWORD') | length > 0
+    fail_msg: Missing value for Podman secret opencloud_admin_password
+  no_log: true
 
 - name: Check legacy OnlyOffice service state
   ansible.builtin.command:
@@ -93,14 +93,43 @@
     recurse: true
   register: opencloud_config_ownership
 
-- name: Deploy opencloud Quadlets
+- name: Deploy OpenCloud with the Podman system role
   ansible.builtin.include_role:
-    name: podman_quadlet
+    name: fedora.linux_system_roles.podman
   vars:
-    podman_quadlet_restart_required: >-
-      {{ podman_secrets_create.changed or opencloud_legacy_files.changed
-         or opencloud_config_ownership.changed }}
-    podman_quadlet_units:
-      - name: opencloud.network
-      - name: opencloud-data.volume
-      - name: opencloud.container
+    podman_run_as_user: root
+    # Quadlet Pull= controls image acquisition; do not force-pull mutable tags.
+    podman_pull_image: false
+    podman_secrets:
+      - name: opencloud_admin_password
+        data: "{{ lookup('env', 'OPENCLOUD_ADMIN_PASSWORD') }}"
+        force: "{{ podman_secrets_recreate | default(false) | bool }}"
+        skip_existing: "{{ not (podman_secrets_recreate | default(false) | bool) }}"
+        restarts:
+          - opencloud
+    podman_quadlet_specs:
+      - template_src: "{{ playbook_dir }}/../roles/opencloud/templates/opencloud.network.j2"
+        restarts:
+          - opencloud
+      - template_src: "{{ playbook_dir }}/../roles/opencloud/templates/opencloud-data.volume.j2"
+        restarts:
+          - opencloud
+      - template_src: "{{ playbook_dir }}/../roles/opencloud/templates/opencloud.container.j2"
+
+- name: Reload systemd after OpenCloud Quadlet deployment
+  ansible.builtin.systemd:
+    daemon_reload: true
+  changed_when: false
+
+- name: Reset failed OpenCloud service state
+  ansible.builtin.command:
+    argv: [systemctl, reset-failed, opencloud.service]
+  changed_when: false
+
+- name: Reconcile OpenCloud service
+  ansible.builtin.systemd:
+    name: opencloud.service
+    state: >-
+      {{ 'restarted'
+         if opencloud_legacy_files.changed or opencloud_config_ownership.changed
+         else 'started' }}

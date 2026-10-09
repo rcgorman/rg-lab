@@ -1,17 +1,47 @@
 ---
-- name: Create vaultwarden secrets
-  ansible.builtin.include_role:
-    name: podman_secrets
-  vars:
-    podman_secrets_values:
-      vaultwarden_admin_token: "{{ lookup('env', 'VAULTWARDEN_ADMIN_TOKEN') }}"
+- name: Validate Vaultwarden secret configuration
+  ansible.builtin.assert:
+    that:
+      - lookup('env', 'VAULTWARDEN_ADMIN_TOKEN') | length > 0
+    fail_msg: Missing value for Podman secret vaultwarden_admin_token
+  no_log: true
 
-- name: Deploy vaultwarden Quadlets
+- name: Deploy Vaultwarden with the Podman system role
   ansible.builtin.include_role:
-    name: podman_quadlet
+    name: fedora.linux_system_roles.podman
   vars:
-    podman_quadlet_restart_required: "{{ podman_secrets_create.changed }}"
-    podman_quadlet_units:
-      - name: vaultwarden.network
-      - name: vaultwarden-data.volume
-      - name: vaultwarden.container
+    podman_run_as_user: root
+    # Quadlet Pull= controls image acquisition; do not force-pull mutable tags.
+    podman_pull_image: false
+    podman_secrets:
+      - name: vaultwarden_admin_token
+        data: "{{ lookup('env', 'VAULTWARDEN_ADMIN_TOKEN') }}"
+        force: "{{ podman_secrets_recreate | default(false) | bool }}"
+        skip_existing: "{{ not (podman_secrets_recreate | default(false) | bool) }}"
+        restarts:
+          - vaultwarden
+    podman_quadlet_specs:
+      - template_src: "{{ playbook_dir }}/../roles/vaultwarden/templates/vaultwarden.network.j2"
+        restarts:
+          - vaultwarden
+      - template_src: "{{ playbook_dir }}/../roles/vaultwarden/templates/vaultwarden-data.volume.j2"
+        restarts:
+          - vaultwarden
+      - template_src: "{{ playbook_dir }}/../roles/vaultwarden/templates/vaultwarden.container.j2"
+
+# The system role activates changed units. This also recovers an interrupted
+# deployment when the files were already written before activation.
+- name: Reload systemd after Vaultwarden Quadlet deployment
+  ansible.builtin.systemd:
+    daemon_reload: true
+  changed_when: false
+
+- name: Reset failed Vaultwarden service state
+  ansible.builtin.command:
+    argv: [systemctl, reset-failed, vaultwarden.service]
+  changed_when: false
+
+- name: Ensure Vaultwarden is running
+  ansible.builtin.systemd:
+    name: vaultwarden.service
+    state: started

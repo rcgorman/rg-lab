@@ -3,6 +3,12 @@
 This directory is organized around VM intent. Baseline host configuration lives in
 the bootc image; Ansible handles enrollment and application deployment.
 
+Install the pinned Ansible collection dependencies before running a playbook:
+
+```bash
+ansible-galaxy collection install --requirements-file ansible/requirements.yml
+```
+
 ## Inventory Groups
 
 - `bootc_hosts`: every bootc VM that should get NetBird enrollment and bootc updates.
@@ -141,10 +147,17 @@ secrets, configuration tasks, and units to deploy. Native Quadlet definitions
 live in that role's `templates/*.container.j2`, `*.network.j2`, and `*.volume.j2`
 files. No application appends to a shared host fact.
 
-The small `podman_secrets` and `podman_quadlet` helpers handle secret creation,
-copying units, daemon reload, and container startup. `Network=app.network` and
+The maintained `fedora.linux_system_roles.podman` system role manages Podman
+secrets and deploys the native Quadlet templates. The collection and its direct
+dependencies are pinned in `requirements.yml`. `Network=app.network` and
 `Volume=data.volume:/data` let Quadlet order the dependency units. `[Install]`
 starts containers at boot; generated units are not enabled with `systemctl enable`.
+
+The system role's image pre-pull behavior is disabled. Each Quadlet's `Pull=`
+setting remains the authority for image acquisition, preserving the repository's
+deliberate update workflow. Application roles perform a final daemon reload and
+`state: started` reconciliation so rerunning a playbook can recover an interrupted
+deployment even when the rendered Quadlet did not change.
 
 Existing named volumes are reused, not erased or reformatted. Editing a `.volume`
 file does not change an existing volume's driver/options. Inspect and plan any
