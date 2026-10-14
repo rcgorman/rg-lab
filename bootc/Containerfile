@@ -4,7 +4,7 @@ ARG RESTIC_VERSION=0.19.1
 ARG RESTIC_LINUX_AMD64_SHA256=f415415624dcc452f2a02b8c33641791a8c6d6d3b65bbb3543fcf9a25151585c
 
 # Netbird Repo
-COPY files/yum.repos.d/netbird.repo /etc/yum.repos.d/netbird.repo
+COPY bootc/files/yum.repos.d/netbird.repo /etc/yum.repos.d/netbird.repo
 
 RUN dnf upgrade -y \
     && dnf install -y \
@@ -88,8 +88,8 @@ RUN install -d -m 0755 /etc/ssh/sshd_config.d \
         > /etc/ssh/sshd_config.d/20-rg-lab-auth.conf
 
 # SELinux lockdown service
-COPY files/kargs.d/01-selinux.toml /usr/lib/bootc/kargs.d/01-selinux.toml
-COPY files/systemd/selinux-lockdown.service /usr/lib/systemd/system/selinux-lockdown.service
+COPY bootc/files/kargs.d/01-selinux.toml /usr/lib/bootc/kargs.d/01-selinux.toml
+COPY bootc/files/systemd/selinux-lockdown.service /usr/lib/systemd/system/selinux-lockdown.service
 
 # Enable services
 RUN systemctl enable \

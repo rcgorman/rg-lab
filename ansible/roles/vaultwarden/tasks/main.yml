@@ -20,28 +20,8 @@
         skip_existing: "{{ not (podman_secrets_recreate | default(false) | bool) }}"
         restarts:
           - vaultwarden
+    # Dependencies must be listed before the container that uses them.
     podman_quadlet_specs:
       - template_src: "{{ playbook_dir }}/../roles/vaultwarden/templates/vaultwarden.network.j2"
-        restarts:
-          - vaultwarden
       - template_src: "{{ playbook_dir }}/../roles/vaultwarden/templates/vaultwarden-data.volume.j2"
-        restarts:
-          - vaultwarden
       - template_src: "{{ playbook_dir }}/../roles/vaultwarden/templates/vaultwarden.container.j2"
-
-# The system role activates changed units. This also recovers an interrupted
-# deployment when the files were already written before activation.
-- name: Reload systemd after Vaultwarden Quadlet deployment
-  ansible.builtin.systemd:
-    daemon_reload: true
-  changed_when: false
-
-- name: Reset failed Vaultwarden service state
-  ansible.builtin.command:
-    argv: [systemctl, reset-failed, vaultwarden.service]
-  changed_when: false
-
-- name: Ensure Vaultwarden is running
-  ansible.builtin.systemd:
-    name: vaultwarden.service
-    state: started

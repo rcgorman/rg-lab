@@ -33,10 +33,3 @@ backups, document and configure:
 
 Snapshots on the same TrueNAS system protect history but are not an off-site
 copy. Do not count the plan as complete until a copy leaves that box.
-
-## Legacy OnlyOffice State
-
-The Ansible role stops OnlyOffice and removes its definitions, but deliberately
-does not delete `onlyoffice-data`, `onlyoffice-lib`, `onlyoffice-postgres`, or
-`onlyoffice-rabbitmq`. Confirm OpenCloud works without the integration and retain
-anything needed before manually deleting those volumes.

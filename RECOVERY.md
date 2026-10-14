@@ -41,12 +41,36 @@ snapshots, and an actual restore have all been tested.
 ## Build The Image
 
 1. Push the desired bootc configuration and wait for the GitHub Actions image
-   build to complete.
-2. Record the image digest or unique `build-<run-id>-<attempt>` tag. Pull that
-   OCI image on an AMD64 Linux system and create the QCOW2 with
-   `bootc-image-builder`.
-3. Copy it to `/var/lib/vz/import/rg-lab-alma10_2-bootc.qcow2` on Proxmox.
-4. Confirm it with `pvesm list local --content import`.
+   build, CIS validation, and image-promotion jobs to complete.
+2. Download and retain the SPDX SBOM and CIS report artifacts from the workflow
+   run.
+3. Record the promoted image digest or unique `build-<run-id>-<attempt>` tag.
+   Pull that OCI image on an AMD64 Linux system and create the QCOW2 with the
+   current osbuild `image-builder` CLI. Use the recorded digest rather than
+   `latest` so the recovery disk is reproducible.
+
+   ```bash
+   export RG_BOOTC_REF='ghcr.io/OWNER/rg-lab/alma10-bootc@sha256:DIGEST'
+   mkdir -p output
+   sudo podman pull "${RG_BOOTC_REF}"
+   sudo podman run --rm --interactive --tty --privileged --pull=newer \
+     --security-opt label=type:unconfined_t \
+     --volume "${PWD}/output:/output" \
+     --volume /var/lib/containers/storage:/var/lib/containers/storage \
+     ghcr.io/osbuild/image-builder-cli:latest \
+     build \
+     --progress verbose \
+     --output-dir /output \
+     --output-name rg-lab-alma10_2-bootc \
+     --bootc-ref "${RG_BOOTC_REF}" \
+     qcow2
+   ```
+
+   Record the `image-builder-cli` image digest used for the conversion alongside
+   the bootc image digest. The resulting disk is
+   `output/rg-lab-alma10_2-bootc.qcow2`.
+4. Copy it to `/var/lib/vz/import/rg-lab-alma10_2-bootc.qcow2` on Proxmox.
+5. Confirm it with `pvesm list local --content import`.
 
 ## Recreate One VM
 

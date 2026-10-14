@@ -59,11 +59,24 @@ tofu -chdir=terraform test
 ## Image Updates
 
 GitHub Actions builds on bootc changes, manual dispatch, and every Monday at
-06:23 UTC. Each uncached build pulls the base image and runs `dnf upgrade` inside
-the build, then applies the configured hardening. This does not update or reboot
-running VMs. Use `ansible/playbooks/bootc_upgrade.yml` for a deliberate rollout.
+06:23 UTC. The workflow uses AlmaLinux `atomic-ci` v13 to build the AMD64 image,
+verify its RPM databases, rechunk it with `bootc-base-imagectl`, and publish an
+SPDX JSON SBOM as a workflow artifact. The Containerfile still runs `dnf upgrade`
+and applies the configured hardening. This does not update or reboot running VMs.
+Use `ansible/playbooks/bootc_upgrade.yml` for a deliberate rollout.
 
-Images receive `latest`, `sha-<commit>`, and unique `build-<run-id>-<attempt>` tags.
+`atomic-ci` builds from the repository root. `.containerignore` restricts that
+context to `bootc/`; keep it in place so Terraform state, recovery material, and
+other workstation files cannot enter the image-build context.
+
+The rechunked image is first published under an internal build tag. A separate
+job extracts its CIS report and compares it with the reviewed baseline. Only a
+passing digest receives `latest`, `sha-<commit>`, and the unique
+`build-<run-id>-<attempt>` tag. Images are not currently signed.
+
+The first upgrade from an image built by the former workflow downloads the full
+image because rechunking changes its layer layout. Later upgrades can reuse the
+package-oriented layers and should transfer substantially less unchanged data.
 Scheduled rebuilds can change `latest` and the commit tag without a Git change;
 record the image digest or unique build tag used for a recovery QCOW2. Ensure a
 VM tracks the intended update tag with `sudo bootc status` before an upgrade.

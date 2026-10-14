@@ -10,6 +10,7 @@ on:
       - main
     paths:
       - bootc/**
+      - .containerignore
       - .github/workflows/build-bootc.yml
 
 permissions:
@@ -20,107 +21,56 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  CONTAINERFILE: bootc/Containerfile
-  BUILD_CONTEXT: bootc
-  DEST_REGISTRY_HOST: ghcr.io
-  DEST_IMAGE: ${{ github.repository_owner }}/rg-lab/alma10-bootc
-  TAGLIST: latest sha-${{ github.sha }} build-${{ github.run_id }}-${{ github.run_attempt }}
-  REGISTRY_AUTH_FILE: /tmp/containers-auth.json
-
 jobs:
   build:
-    name: Build and push bootc image
+    name: Build, validate, and rechunk image
+    uses: AlmaLinux/atomic-ci/.github/workflows/build-image.yml@v13
+    with:
+      containerfile: bootc/Containerfile
+      image-name: alma10-bootc
+      image-path: ${{ github.repository_owner }}/rg-lab
+      image-description: rg-lab AlmaLinux 10 bootc image
+      previous-image: ghcr.io/${{ github.repository_owner }}/rg-lab/alma10-bootc:latest
+      platforms: amd64
+      generate-sbom: true
+      REGISTRY: ghcr.io
+      REGISTRY_USER: ${{ github.actor }}
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+  cis:
+    name: Verify CIS findings
     runs-on: ubuntu-24.04
+    needs: build
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Maximize build space
-        run: |
-          set -euxo pipefail
-          df -h
-          sudo rm -rf \
-            /opt/hostedtoolcache \
-            /opt/az \
-            /usr/local/lib/android \
-            /usr/local/share/boost \
-            /usr/local/share/chromium \
-            /usr/local/share/powershell \
-            /usr/share/dotnet \
-            /usr/share/swift
-          sudo apt-get clean
-          df -h
-
       - name: Log in to GHCR
-        env:
-          REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          printf '%s' "${REGISTRY_PASSWORD}" | podman login \
-            --username "${{ github.actor }}" \
-            --password-stdin \
-            --authfile "${REGISTRY_AUTH_FILE}" \
-            "${DEST_REGISTRY_HOST}"
-
-      - name: Pull bootc base image
-        run: |
-          set -euo pipefail
-          base_image=$(awk '$1 == "FROM" { print $2; exit }' "${CONTAINERFILE}")
-          if [[ -z "${base_image}" ]]; then
-            echo "::error::Could not determine the base image from ${CONTAINERFILE}"
-            exit 1
-          fi
-
-          for attempt in 1 2 3 4 5; do
-            if sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" \
-              podman --root /mnt/containers-storage pull \
-                --arch=amd64 \
-                "${base_image}"; then
-              exit 0
-            fi
-
-            if [[ "${attempt}" -eq 5 ]]; then
-              echo "::error::Failed to pull ${base_image} after ${attempt} attempts"
-              exit 1
-            fi
-
-            retry_delay=$((attempt * 15))
-            echo "::warning::Base image pull attempt ${attempt} failed; retrying in ${retry_delay} seconds"
-            sleep "${retry_delay}"
-          done
-
-      - name: Build bootc image
-        run: |
-          set -euo pipefail
-          image_ref="${DEST_REGISTRY_HOST}/${DEST_IMAGE}"
-          tag_args=()
-          for tag in ${TAGLIST}; do
-            tag_args+=(--tag "${image_ref}:${tag}")
-          done
-
-          sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman build \
-            --security-opt=label=disable \
-            --cap-add=all \
-            --device=/dev/fuse \
-            --arch=amd64 \
-            --no-cache \
-            --pull=never \
-            --root /mnt/containers-storage \
-            "${tag_args[@]}" \
-            --file "${CONTAINERFILE}" \
-            "${BUILD_CONTEXT}"
+        uses: redhat-actions/podman-login@50c2d9a331bb67c8fdab99b86455fad05e2e3252 # v2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract CIS report
+        env:
+          IMAGE_REF: ${{ needs.build.outputs.image-ref }}@${{ needs.build.outputs.digest }}
         run: |
           set -euo pipefail
-          image_ref="${DEST_REGISTRY_HOST}/${DEST_IMAGE}:build-${{ github.run_id }}-${{ github.run_attempt }}"
-          container=$(sudo podman --root /mnt/containers-storage create "$image_ref")
-          trap 'sudo podman --root /mnt/containers-storage rm "$container"' EXIT
-          sudo podman --root /mnt/containers-storage cp "$container:/usr/share/rg-lab/cis-server-l1.html" ./cis-server-l1.html
-          sudo podman --root /mnt/containers-storage cp "$container:/usr/share/rg-lab/cis-server-l1-results.xml" ./cis-server-l1-results.xml
-          sudo chown "$(id -u):$(id -g)" cis-server-l1.html cis-server-l1-results.xml
+          podman pull "${IMAGE_REF}"
+          container=$(podman create "${IMAGE_REF}")
+          trap 'podman rm "$container"' EXIT
+          podman cp "$container:/usr/share/rg-lab/cis-server-l1.html" ./cis-server-l1.html
+          podman cp "$container:/usr/share/rg-lab/cis-server-l1-results.xml" ./cis-server-l1-results.xml
 
       - name: Check CIS findings against reviewed baseline
         run: python3 bootc/scripts/check-cis-report.py cis-server-l1.html bootc/cis-expected-findings.txt
@@ -135,14 +85,22 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Push image tags
-        run: |
-          set -euo pipefail
-          image_ref="${DEST_REGISTRY_HOST}/${DEST_IMAGE}"
-          for tag in ${TAGLIST}; do
-            sudo env REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE}" podman --root /mnt/containers-storage push "${image_ref}:${tag}"
-          done
-
-      - name: Log out of GHCR
-        if: always()
-        run: podman logout --authfile "${REGISTRY_AUTH_FILE}" "${DEST_REGISTRY_HOST}" || true
+  promote:
+    name: Promote validated image
+    needs:
+      - build
+      - cis
+    uses: AlmaLinux/atomic-ci/.github/workflows/retag-image.yml@v13
+    with:
+      image: ${{ needs.build.outputs.image-ref }}
+      digest: ${{ needs.build.outputs.digest }}
+      tag: |
+        latest
+        sha-${{ github.sha }}
+        build-${{ github.run_id }}-${{ github.run_attempt }}
+      REGISTRY: ghcr.io
+      REGISTRY_USER: ${{ github.actor }}
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      packages: write

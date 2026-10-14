@@ -29,10 +29,6 @@ LAN. The required routes currently known to Git are:
 | `cloud.internal.gormantech.com` | `http://10.6.13.22:9200` |
 | Immich frontend name: **record in this file** | `http://10.6.13.22:2283` |
 
-Remove the obsolete `office.internal.gormantech.com` DNS entry, certificate
-name, and HAProxy backend after deploying the OpenCloud change that removes
-OnlyOffice.
-
 Record the following external configuration here when verified:
 
 - OPNsense interface/VLAN and firewall rule names.

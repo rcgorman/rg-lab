@@ -150,14 +150,15 @@ files. No application appends to a shared host fact.
 The maintained `fedora.linux_system_roles.podman` system role manages Podman
 secrets and deploys the native Quadlet templates. The collection and its direct
 dependencies are pinned in `requirements.yml`. `Network=app.network` and
-`Volume=data.volume:/data` let Quadlet order the dependency units. `[Install]`
-starts containers at boot; generated units are not enabled with `systemctl enable`.
+`Volume=data.volume:/data` let Quadlet order the dependency units. Dependency
+specs are listed before their containers so the system role creates and starts
+them first. `[Install]` starts containers at boot; generated units are not
+enabled with `systemctl enable`.
 
 The system role's image pre-pull behavior is disabled. Each Quadlet's `Pull=`
 setting remains the authority for image acquisition, preserving the repository's
-deliberate update workflow. Application roles perform a final daemon reload and
-`state: started` reconciliation so rerunning a playbook can recover an interrupted
-deployment even when the rendered Quadlet did not change.
+deliberate update workflow. The system role reloads systemd and activates a
+Quadlet when its rendered definition changes.
 
 Existing named volumes are reused, not erased or reformatted. Editing a `.volume`
 file does not change an existing volume's driver/options. Inspect and plan any
@@ -249,11 +250,3 @@ sops exec-env ansible/secrets.sops.yml \
 The reverse proxy needs this route:
 
 - `cloud.internal.gormantech.com` to `http://10.6.13.22:9200`
-
-The first OpenCloud deployment after this change stops the legacy OnlyOffice
-service and removes its Quadlet units, application registry, CSP override, and
-Podman secret. It deliberately preserves the four `onlyoffice-*` Podman volumes
-and `/srv/quadlet/opencloud/apps` so the old state is not destroyed implicitly.
-After OpenCloud has been verified and any needed data retained, remove those
-volumes manually and delete the obsolete `office.internal.gormantech.com` DNS
-and HAProxy configuration.

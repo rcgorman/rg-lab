@@ -16,8 +16,9 @@ Application containers should not be defined here. They belong in Ansible roles 
 
 ## Assumed Flow
 
-1. Build and push the bootc image with GitHub Actions.
-2. Convert the image to `qcow2`.
+1. Build, validate, and promote the bootc image with GitHub Actions.
+2. Convert the promoted digest to `qcow2` with osbuild `image-builder` as
+   documented in [`RECOVERY.md`](../RECOVERY.md#build-the-image).
 3. Upload/import the disk into Proxmox storage so it has a file ID such as `local:import/rg-lab-alma10_2-bootc.qcow2`.
 4. Use OpenTofu to create workload VMs from that image.
 5. Run Ansible from the administrator workstation to enroll NetBird and deploy Podman quadlets.
