@@ -76,7 +76,7 @@ jobs:
         run: python3 bootc/scripts/check-cis-report.py cis-server-l1.html bootc/cis-expected-findings.txt
 
       - name: Upload CIS report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cis-server-l1
           path: |
