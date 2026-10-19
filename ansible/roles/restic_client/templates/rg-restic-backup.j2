@@ -15,7 +15,7 @@ for path in "${backup_paths[@]}"; do
   fi
 done
 
-exec /usr/local/libexec/rg-restic backup \
+exec /usr/bin/bash {{ restic_client_libexec_dir | quote }}/rg-restic backup \
   --host {{ restic_client_host | quote }} \
 {% for tag in restic_client_tags %}
   --tag {{ tag | quote }} \

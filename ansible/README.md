@@ -129,7 +129,7 @@ deploy it without enabling the timer yet:
 ```bash
 sops exec-env ansible/secrets.sops.yml \
   'ansible-playbook ansible/playbooks/backups.yml -e restic_client_enabled=true'
-sudo /usr/local/libexec/rg-restic snapshots
+sudo /usr/bin/bash /etc/rg-lab/libexec/rg-restic snapshots
 sudo systemctl start rg-restic-backup.service
 ```
 

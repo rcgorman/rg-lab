@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/libexec/rg-backup-{{ item }}
+ExecStart=/usr/bin/bash {{ application_backup_libexec_dir }}/rg-backup-{{ item }}
 UMask=0077
 Nice=10
 IOSchedulingClass=best-effort

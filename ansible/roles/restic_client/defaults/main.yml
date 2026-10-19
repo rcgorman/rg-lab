@@ -2,6 +2,7 @@
 restic_client_enabled: false
 restic_client_timer_enabled: false
 restic_client_binary: /usr/local/bin/restic
+restic_client_libexec_dir: /etc/rg-lab/libexec
 restic_client_secret_suffix: "{{ inventory_hostname | upper | regex_replace('[^A-Z0-9]', '_') }}"
 restic_client_repository: >-
   {{ lookup('env', 'RESTIC_REPOSITORY_' ~ restic_client_secret_suffix) }}

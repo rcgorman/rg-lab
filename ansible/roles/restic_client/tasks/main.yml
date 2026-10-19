@@ -39,7 +39,7 @@
       loop:
         - path: /etc/restic
           mode: "0700"
-        - path: /usr/local/libexec
+        - path: "{{ restic_client_libexec_dir }}"
           mode: "0700"
 
     - name: Install Restic repository settings
@@ -63,7 +63,7 @@
     - name: Install Restic command wrapper
       ansible.builtin.template:
         src: rg-restic.j2
-        dest: /usr/local/libexec/rg-restic
+        dest: "{{ restic_client_libexec_dir }}/rg-restic"
         owner: root
         group: root
         mode: "0700"
@@ -72,7 +72,7 @@
     - name: Install Restic backup wrapper
       ansible.builtin.template:
         src: rg-restic-backup.j2
-        dest: /usr/local/libexec/rg-restic-backup
+        dest: "{{ restic_client_libexec_dir }}/rg-restic-backup"
         owner: root
         group: root
         mode: "0700"

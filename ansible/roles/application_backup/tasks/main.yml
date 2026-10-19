@@ -18,12 +18,12 @@
     mode: "0700"
   loop:
     - "{{ application_backup_root }}"
-    - /usr/local/libexec
+    - "{{ application_backup_libexec_dir }}"
 
 - name: Install application backup scripts
   ansible.builtin.template:
     src: "{{ item }}.sh.j2"
-    dest: "/usr/local/libexec/rg-backup-{{ item }}"
+    dest: "{{ application_backup_libexec_dir }}/rg-backup-{{ item }}"
     owner: root
     group: root
     mode: "0700"

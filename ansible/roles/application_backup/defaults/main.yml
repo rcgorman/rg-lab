@@ -1,6 +1,7 @@
 ---
 application_backup_jobs: []
 application_backup_root: /var/backups/rg-lab
+application_backup_libexec_dir: /etc/rg-lab/libexec
 application_backup_retention_days: 7
 application_backup_timers_enabled: false
 application_backup_supported_jobs:

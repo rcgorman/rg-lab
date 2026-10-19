@@ -7,6 +7,11 @@ included in `site.yml`. Their timers default to disabled. Do not enable them
 until the TrueNAS Restic service, repository credentials, retention, alerts, and
 off-site destination are ready.
 
+Ansible installs the generated backup helpers under `/etc/rg-lab/libexec` because
+bootc keeps `/usr`, including `/usr/local`, read-only at runtime. The systemd
+services invoke these helpers through `/usr/bin/bash` so their host-managed
+location works with SELinux enforcing.
+
 The intended data flow is:
 
 ```text
