@@ -103,10 +103,10 @@ TrueNAS-resident data.
 ## Restic Client
 
 The bootc image installs a checksum-verified Restic binary. The backup playbook
-targets both workload VMs, but the `restic_client` role remains disabled until a
-repository is available. It backs up `/var/backups/rg-lab`; retention and pruning
-deliberately remain server-side so the future REST clients can use append-only
-credentials.
+targets both workload VMs and backs up `/var/backups/rg-lab`. Inventory enables
+the client and timers after repository creation and restore validation;
+retention and pruning deliberately remain server-side so the REST clients can
+use append-only credentials.
 
 For each host, add these SOPS keys, using the inventory hostname converted to
 upper case with punctuation replaced by underscores:
@@ -123,22 +123,26 @@ RESTIC_REST_USERNAME_RG_DATA01
 RESTIC_REST_PASSWORD_RG_DATA01
 ```
 
-After initializing the repositories on the backup server, enable the role and
-deploy it without enabling the timer yet:
+The role defaults enable scheduled backups. When bootstrapping new repositories,
+deploy with both timers temporarily disabled:
 
 ```bash
 sops exec-env ansible/secrets.sops.yml \
-  'ansible-playbook ansible/playbooks/backups.yml -e restic_client_enabled=true'
+  'ansible-playbook ansible/playbooks/backups.yml -e application_backup_timers_enabled=false -e restic_client_timer_enabled=false'
 sudo /usr/bin/bash /etc/rg-lab/libexec/rg-restic snapshots
 sudo systemctl start rg-restic-backup.service
 ```
 
 After verifying the application artifacts, the first Restic snapshots, and a
-restore, enable scheduled operation with
-`application_backup_timers_enabled=true`, `restic_client_enabled=true`, and
-`restic_client_timer_enabled=true` in inventory. Restic repository passwords
-must also remain in the independent recovery kit; the workload VMs must not hold
-server-side prune credentials.
+restore, apply the normal role defaults to enable scheduled operation:
+
+```bash
+sops exec-env ansible/secrets.sops.yml \
+  'ansible-playbook ansible/playbooks/backups.yml'
+```
+
+Restic repository passwords must also remain in the independent recovery kit;
+the workload VMs must not hold server-side prune credentials.
 
 ## Service Definitions
 

@@ -52,14 +52,17 @@ systemctl stop vaultwarden.service
 vaultwarden_stopped=true
 
 install -d -m 0700 "${stage_dir}/data"
-rsync --archive \
-  --exclude='/db.sqlite3' \
-  --exclude='/db.sqlite3-shm' \
-  --exclude='/db.sqlite3-wal' \
-  --exclude='/db_*.sqlite3' \
-  --exclude='/icon_cache/' \
-  --exclude='/tmp/' \
-  "${volume_path}/" "${stage_dir}/data/"
+tar --create \
+  --directory="${volume_path}" \
+  --exclude='./db.sqlite3' \
+  --exclude='./db.sqlite3-shm' \
+  --exclude='./db.sqlite3-wal' \
+  --exclude='./db_*.sqlite3' \
+  --exclude='./icon_cache' \
+  --exclude='./tmp' \
+  --file=- \
+  . \
+  | tar --extract --directory="${stage_dir}/data" --file=-
 install -m 0600 "${database_snapshot}" "${stage_dir}/data/db.sqlite3"
 
 rm -f -- "${database_snapshot}"

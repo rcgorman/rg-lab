@@ -25,7 +25,8 @@ flock --nonblock 9
 install -d -m 0700 "${job_root}"
 stage_dir=$(mktemp --directory "${job_root}/.tmp.${timestamp}.XXXXXX")
 install -d -m 0700 "${stage_dir}/config"
-rsync --archive --delete /srv/quadlet/opencloud/ "${stage_dir}/config/"
+tar --create --directory=/srv/quadlet/opencloud --file=- . \
+  | tar --extract --directory="${stage_dir}/config" --file=-
 
 {
   printf 'created_utc=%s\n' "${timestamp}"

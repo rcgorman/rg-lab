@@ -2,10 +2,15 @@
 
 ## Current Status
 
-The application-backup and Restic roles are implemented but intentionally not
-included in `site.yml`. Their timers default to disabled. Do not enable them
-until the TrueNAS Restic service, repository credentials, retention, alerts, and
-off-site destination are ready.
+The application-backup and Restic roles remain intentionally separate from
+`site.yml`. Their role defaults enable the timers after the primary repositories
+and a test restore were validated on 2026-10-19. Apply this configuration
+explicitly with the SOPS-wrapped `backups.yml` playbook so repository
+credentials are available during the run.
+
+Server-side retention and failure alerts remain to be configured. An off-site
+copy is intentionally deferred; this is an accepted single-site risk, not a
+blocker for operating the current backup system.
 
 Ansible installs the generated backup helpers under `/etc/rg-lab/libexec` because
 bootc keeps `/usr`, including `/usr/local`, read-only at runtime. The systemd
@@ -18,11 +23,12 @@ The intended data flow is:
 VM-local state
   -> application-consistent artifact in /var/backups/rg-lab
   -> Restic repository on TrueNAS
-  -> independent off-site copy
 
 TrueNAS Immich/OpenCloud datasets
   -> periodic ZFS snapshots
-  -> independent off-site replication or backup
+
+Optional future improvement
+  -> independent off-site copy of both protection paths
 ```
 
 ## Application Artifacts
@@ -46,18 +52,21 @@ with up to 20 minutes of random delay when enabled.
    recovery kit as well as SOPS.
 5. Configure server-side forget/prune maintenance with credentials unavailable
    to the workload VMs.
-6. Configure an off-site copy and backup-failure notification destination.
+6. Configure a backup-failure notification destination.
 
 The required host-specific SOPS environment keys are documented in
-`ansible/README.md`. First deploy with both timers disabled, run each application
-backup manually, inspect its artifact, upload it manually with Restic, and test a
-restore. Only then set:
+`ansible/README.md`. For a new repository, first deploy with both timers
+disabled, run each application backup manually, inspect its artifact, upload it
+manually with Restic, and test a restore. Override the enabled role defaults
+during that bootstrap run:
 
-```yaml
-application_backup_timers_enabled: true
-restic_client_enabled: true
-restic_client_timer_enabled: true
+```bash
+sops exec-env ansible/secrets.sops.yml \
+  'ansible-playbook ansible/playbooks/backups.yml -e application_backup_timers_enabled=false -e restic_client_timer_enabled=false'
 ```
+
+After the restore test passes, rerun the playbook without those overrides to
+enable scheduled operation.
 
 ## Disposable Restore Test
 
@@ -82,7 +91,15 @@ Before declaring backups complete, alert on:
 - No successful application artifact within its expected interval.
 - No recent Restic snapshot for either VM.
 - Restic repository check or server-side maintenance failure.
-- TrueNAS pool degradation, failed SMART tests, and missed snapshots/replication.
+- TrueNAS pool degradation, failed SMART tests, and missed snapshots.
 
 The notification transport is intentionally undecided; choose it alongside the
 TrueNAS deployment rather than embedding an unmonitored placeholder.
+
+## Accepted Single-Site Risk
+
+Off-site replication is deferred with no committed delivery date. Restic and
+ZFS snapshots on the same TrueNAS system protect against client compromise,
+accidental deletion, and many logical failures, but they do not protect against
+loss of the TrueNAS system or site through theft, fire, flood, or a pool-wide
+failure. Revisit this decision if the cost or availability constraints change.

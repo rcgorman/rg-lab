@@ -9,7 +9,7 @@ NetBird changes.
 | System | Address | Purpose |
 | --- | --- | --- |
 | OPNsense | `10.6.13.1` | VM gateway and DNS resolver |
-| TrueNAS | `10.6.13.5` | Application datasets and future Restic service |
+| TrueNAS | `10.6.13.5` | Application datasets and Restic service |
 | Proxmox | `10.6.13.10` | Hypervisor API and management |
 | `rg-identity01` | `10.6.13.21` | Vaultwarden |
 | `rg-data01` | `10.6.13.22` | Immich and OpenCloud |
@@ -27,6 +27,7 @@ LAN. The required routes currently known to Git are:
 | --- | --- |
 | `vault.internal.gormantech.com` | `http://10.6.13.21:18080` |
 | `cloud.internal.gormantech.com` | `http://10.6.13.22:9200` |
+| `restic.internal.gormantech.com` | `http://10.6.13.5:30248` |
 | Immich frontend name: **record in this file** | `http://10.6.13.22:2283` |
 
 Record the following external configuration here when verified:
@@ -35,6 +36,8 @@ Record the following external configuration here when verified:
 - DNS override records and their TTLs.
 - HAProxy frontend, certificate, ACL, and backend names.
 - Whether backend health checks use `/alive`, `/api/server/ping`, and `/healthz`.
+  The Restic backend should use a TCP check or accept its expected unauthenticated
+  HTTP `401` response as healthy.
 
 ## Administrative Routing
 

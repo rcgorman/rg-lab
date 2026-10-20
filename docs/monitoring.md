@@ -35,7 +35,7 @@ Backup freshness is more important than general uptime. Add checks for:
 - Latest successful `rg-restic-backup.service` run on both VMs.
 - Age of the newest Restic snapshot for each repository.
 - Restic repository check and maintenance results.
-- TrueNAS pool health, SMART tests, scrubs, snapshots, and off-site replication.
+- TrueNAS pool health, SMART tests, scrubs, and snapshots.
 
 Select one notification destination that is usable when Vaultwarden or the lab
 is unavailable. Trigger a controlled test alert after configuration and record
