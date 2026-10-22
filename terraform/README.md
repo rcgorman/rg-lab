@@ -137,7 +137,7 @@ Create your real variables file:
 cp tofu.tfvars.example tofu.tfvars
 ```
 
-Edit `tofu.tfvars`, then run:
+Edit `tofu.tfvars`, including the required, nonempty `vms` map, then run:
 
 ```bash
 tofu init

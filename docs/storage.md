@@ -19,10 +19,12 @@ Podman mounts the two NFS application datasets directly through Quadlet named
 volumes. They are not host `/mnt` mounts, and they must not be repurposed as the
 Restic repository.
 
-## Snapshot Policy
+## Planned Snapshot Policy
 
-TrueNAS periodic snapshot tasks protect the application datasets and the Restic
-repository dataset. All schedules use the TrueNAS `America/New_York` timezone.
+Configure TrueNAS periodic snapshot tasks for the application datasets and the
+Restic repository dataset. The following are intended schedules, not tasks
+managed by this repository. Set the TrueNAS timezone to `America/New_York` so
+these are Eastern wall-clock times, including daylight saving time.
 
 | Dataset | Schedule | Lifetime |
 | --- | --- | --- |
@@ -32,6 +34,12 @@ repository dataset. All schedules use the TrueNAS `America/New_York` timezone.
 | `Storage/opencloud` | Monthly at 01:00 | 6 months |
 | `Storage/restic` | Daily at 01:00 | 30 days |
 | `Storage/restic` | Monthly at 01:00 | 6 months |
+
+Run the monthly tasks on the first day of each month. The VM backup chain starts
+at 10:00 p.m. Eastern, with up to 20 minutes of random delay, so the 1:00 a.m.
+snapshots are about 2 hours 40 minutes after the latest scheduled start, minus
+the time needed to complete the backup chain. Confirm it actually finishes
+before the snapshots as storage use grows.
 
 Record the exact TrueNAS task names after confirming them in the UI. SMART
 tests, the scrub schedule, pool-health alerts, and their notification

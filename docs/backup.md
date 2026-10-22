@@ -8,9 +8,10 @@ and a test restore were validated on 2026-10-19. Apply this configuration
 explicitly with the SOPS-wrapped `backups.yml` playbook so repository
 credentials are available during the run.
 
-Server-side retention and failure alerts remain to be configured. An off-site
-copy is intentionally deferred; this is an accepted single-site risk, not a
-blocker for operating the current backup system.
+Server-side Restic maintenance, TrueNAS snapshot timers, and failure alerts
+remain to be configured. An off-site copy is intentionally deferred; this is an
+accepted single-site risk, not a blocker for operating the current backup
+system.
 
 Ansible installs the generated backup helpers under `/etc/rg-lab/libexec` because
 bootc keeps `/usr`, including `/usr/local`, read-only at runtime. The systemd
@@ -25,7 +26,7 @@ VM-local state
   -> Restic repository on TrueNAS
 
 TrueNAS Immich/OpenCloud datasets
-  -> periodic ZFS snapshots
+  -> planned periodic ZFS snapshots
 
 Optional future improvement
   -> independent off-site copy of both protection paths
@@ -33,15 +34,18 @@ Optional future improvement
 
 ## Application Artifacts
 
-| Host | Artifact | Default schedule when enabled |
+| Host | Artifacts, in execution order | Nightly start |
 | --- | --- | --- |
-| `rg-identity01` | Vaultwarden SQLite backup plus files and keys | Daily at 02:10, randomized by up to 15 minutes |
-| `rg-data01` | Compressed Immich PostgreSQL dump | Daily at 02:25, randomized by up to 15 minutes |
-| `rg-data01` | OpenCloud configuration | Daily at 02:40, randomized by up to 15 minutes |
+| `rg-identity01` | Vaultwarden SQLite backup plus files and keys, then Restic upload | 10:00 p.m. Eastern, plus up to 20 minutes of random delay |
+| `rg-data01` | Compressed Immich PostgreSQL dump, OpenCloud configuration, then Restic upload | 10:00 p.m. Eastern, plus up to 20 minutes of random delay |
 
-Timers are persistent, so a missed run is started after the host returns. Local
-artifacts are retained for seven days. The Restic upload is scheduled for 04:00
-with up to 20 minutes of random delay when enabled.
+Each VM has one persistent timer, `rg-restic-backup.timer`. Its service runs the
+application backups sequentially and uploads only if every application backup
+succeeds. A missed run starts after the host returns. Local artifacts are
+retained for seven days. The timer uses `America/New_York`, so it remains at
+10:00 p.m. local time through EST/EDT changes. The planned 1:00 a.m. Eastern
+TrueNAS snapshots should run after the upload; check actual completion times as
+data grows.
 
 ## TrueNAS Restic Prerequisites
 
@@ -55,17 +59,17 @@ with up to 20 minutes of random delay when enabled.
 6. Configure a backup-failure notification destination.
 
 The required host-specific SOPS environment keys are documented in
-`ansible/README.md`. For a new repository, first deploy with both timers
-disabled, run each application backup manually, inspect its artifact, upload it
-manually with Restic, and test a restore. Override the enabled role defaults
-during that bootstrap run:
+`ansible/README.md`. For a new repository, first deploy with the single timer
+disabled, run the application backup services manually, inspect their artifacts,
+then start the Restic service and test a restore. Override the enabled role
+default during that bootstrap run:
 
 ```bash
 sops exec-env ansible/secrets.sops.yml \
-  'ansible-playbook ansible/playbooks/backups.yml -e application_backup_timers_enabled=false -e restic_client_timer_enabled=false'
+  'ansible-playbook ansible/playbooks/backups.yml -e restic_client_timer_enabled=false'
 ```
 
-After the restore test passes, rerun the playbook without those overrides to
+After the restore test passes, rerun the playbook without the override to
 enable scheduled operation.
 
 ## Disposable Restore Test
@@ -73,7 +77,9 @@ enable scheduled operation.
 Record the date, source snapshot ID, operator, and outcome for every test.
 
 1. Create an isolated disposable VM from the recorded bootc image digest.
-2. Run the host and application configuration without enabling backup timers.
+2. Run baseline host configuration, then configure backups with
+   `restic_client_timer_enabled=false`. Do not start the application playbooks
+   before choosing and staging the existing-data restore path.
 3. Restore `/var/backups/rg-lab` from a selected Restic snapshot.
 4. Restore Vaultwarden into an empty `vaultwarden-data` volume and verify login,
    attachments, Sends, and administrative access.

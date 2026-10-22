@@ -57,7 +57,10 @@ variable "vms" {
     on_boot      = optional(bool, true)
     tags         = optional(list(string), [])
   }))
-  default = {}
+  validation {
+    condition     = length(var.vms) > 0
+    error_message = "The vms map must not be empty; an empty map would plan to remove every managed VM."
+  }
 
   validation {
     condition     = length(distinct([for vm in values(var.vms) : split("/", vm.ipv4_address)[0]])) == length(var.vms)

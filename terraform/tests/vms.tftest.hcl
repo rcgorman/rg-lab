@@ -65,6 +65,14 @@ run "reject_duplicate_ip_with_different_prefix" {
   expect_failures = [var.vms]
 }
 
+run "reject_empty_vm_map" {
+  command = plan
+  variables {
+    vms = {}
+  }
+  expect_failures = [var.vms]
+}
+
 run "reject_invalid_network_identity" {
   command = plan
   variables {

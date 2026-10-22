@@ -2,6 +2,10 @@
 set -Eeuo pipefail
 umask 077
 
+{% for job in application_backup_jobs | default([]) %}
+systemctl start {{ ('rg-backup-' ~ job ~ '.service') | quote }}
+{% endfor %}
+
 backup_paths=(
 {% for path in restic_client_backup_paths %}
   {{ path | quote }}

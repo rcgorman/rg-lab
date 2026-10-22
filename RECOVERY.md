@@ -33,8 +33,9 @@ index. Stop the relevant stack before a raw volume backup; copying a live
 database directory is not a consistent database backup. The machine-learning
 cache is rebuildable and does not need a recovery backup.
 
-The backup roles are prepared but deliberately excluded from `site.yml`, and
-their timers default to disabled until the TrueNAS Restic repository is ready.
+The backup roles are deliberately excluded from `site.yml`. The single nightly
+timer is enabled when `backups.yml` runs, unless explicitly disabled during
+repository bootstrap or a restore test.
 Do not treat the repository as recoverable until application artifacts, Restic
 snapshots, and an actual restore have all been tested.
 
@@ -139,9 +140,9 @@ ssh ansible@10.6.13.21
 
 ## Configure One VM
 
-Run the complete desired configuration directly from the workstation. SOPS
-passes decrypted values only to the Ansible child process, and the limit
-prevents changes to any other host.
+For a deliberate fresh installation, run the complete desired configuration
+directly from the workstation. SOPS passes decrypted values only to the Ansible
+child process, and the limit prevents changes to any other host.
 
 ```bash
 sops exec-env ansible/secrets.sops.yml \
@@ -155,9 +156,15 @@ sops exec-env ansible/secrets.sops.yml \
   'ansible-playbook ansible/playbooks/site.yml --limit rg-data01'
 ```
 
-Restore stateful volume data before running the corresponding service playbook
-when preserving an existing installation. For a deliberate fresh installation,
-let the playbook create empty volumes.
+To preserve an existing installation, do not run `site.yml` first: it starts the
+application services and can initialize empty state. Run `host_config.yml`,
+`admin_users.yml`, and `netbird.yml` for the rebuilt VM. Restore Vaultwarden's
+volume and OpenCloud's configuration and matching TrueNAS data before their
+application playbooks. Immich needs its PostgreSQL dump imported into a fresh
+database and its matching TrueNAS library attached before the server is made
+available; `immich.yml` starts the whole stack, so stage a database-only import
+before using it. Configure `backups.yml` only after validating the restored
+application and repository credentials.
 
 ### Fresh Vaultwarden
 

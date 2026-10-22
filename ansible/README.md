@@ -76,10 +76,10 @@ NAS-backed app data is mounted with Podman named NFS volumes instead of host `/m
 ## Application Backups
 
 `playbooks/backups.yml` is intentionally excluded from `site.yml`. When run, it
-installs root-owned systemd services and timers that create recovery artifacts
-under `/var/backups/rg-lab`. Both the application and Restic timers are disabled
-by default until the Restic repository is ready and a manual backup and restore
-have succeeded. Local artifacts are retained for seven days:
+installs root-owned systemd services that create recovery artifacts under
+`/var/backups/rg-lab`. Its single per-host timer is enabled by default; use the
+disabled-timer bootstrap command below until a new repository and test restore
+are ready. Local artifacts are retained for seven days:
 
 - Vaultwarden runs its native SQLite backup, briefly stops the service while
   copying attachments, Sends, configuration, and signing keys, and then verifies
@@ -89,13 +89,21 @@ have succeeded. Local artifacts are retained for seven days:
 - OpenCloud copies `/srv/quadlet/opencloud`. Its NAS-backed application data must
   also be protected on TrueNAS.
 
-Inspect the timers and run a backup manually with:
+The `rg-restic-backup.service` runs the appropriate application services in
+order, then uploads their artifacts to Restic. A failed application service
+stops the chain before upload. Inspect the timer and run the full chain manually
+with:
 
 ```bash
-systemctl list-timers 'rg-backup-*'
-sudo systemctl start rg-backup-vaultwarden.service
-journalctl -u rg-backup-vaultwarden.service
+systemctl list-timers rg-restic-backup.timer
+sudo systemctl start rg-restic-backup.service
+journalctl -u rg-restic-backup.service
 ```
+
+The nightly start is 10:00 p.m. `America/New_York`, plus up to 20 minutes of
+random delay. This stays at the same Eastern wall-clock time across EST/EDT.
+The individual `rg-backup-*.service` units remain available for manual runs,
+but only `rg-restic-backup.timer` schedules backups.
 
 Do not treat the Immich or OpenCloud artifacts as complete without their
 TrueNAS-resident data.
@@ -103,10 +111,10 @@ TrueNAS-resident data.
 ## Restic Client
 
 The bootc image installs a checksum-verified Restic binary. The backup playbook
-targets both workload VMs and backs up `/var/backups/rg-lab`. Inventory enables
-the client and timers after repository creation and restore validation;
-retention and pruning deliberately remain server-side so the REST clients can
-use append-only credentials.
+targets both workload VMs and backs up `/var/backups/rg-lab`. The role default
+enables the single timer after the playbook runs. Retention and pruning
+deliberately remain server-side so the REST clients can use append-only
+credentials.
 
 For each host, add these SOPS keys, using the inventory hostname converted to
 upper case with punctuation replaced by underscores:
@@ -123,12 +131,11 @@ RESTIC_REST_USERNAME_RG_DATA01
 RESTIC_REST_PASSWORD_RG_DATA01
 ```
 
-The role defaults enable scheduled backups. When bootstrapping new repositories,
-deploy with both timers temporarily disabled:
+When bootstrapping a new repository, deploy with the timer temporarily disabled:
 
 ```bash
 sops exec-env ansible/secrets.sops.yml \
-  'ansible-playbook ansible/playbooks/backups.yml -e application_backup_timers_enabled=false -e restic_client_timer_enabled=false'
+  'ansible-playbook ansible/playbooks/backups.yml -e restic_client_timer_enabled=false'
 sudo /usr/bin/bash /etc/rg-lab/libexec/rg-restic snapshots
 sudo systemctl start rg-restic-backup.service
 ```

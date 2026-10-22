@@ -2,20 +2,20 @@
 - name: Configure identity application backups
   hosts: identity_hosts
   become: true
+  vars:
+    application_backup_jobs:
+      - vaultwarden
   roles:
     - role: application_backup
-      vars:
-        application_backup_jobs:
-          - vaultwarden
     - role: restic_client
 
 - name: Configure data application backups
   hosts: data_hosts
   become: true
+  vars:
+    application_backup_jobs:
+      - immich
+      - opencloud
   roles:
     - role: application_backup
-      vars:
-        application_backup_jobs:
-          - immich
-          - opencloud
     - role: restic_client
